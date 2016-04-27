@@ -17,7 +17,7 @@ public class S3ControllerTest {
     @Autowired S3Controller s3Controller;
     @Test
     public void getS3() throws Exception {
-        String time = s3Controller.getS3("httpget.py");
+        String time = s3Controller.getS3("test-bucket", "test-filekey");
         System.out.println("TIme: "+ time);
         assertNotNull(time);
     }

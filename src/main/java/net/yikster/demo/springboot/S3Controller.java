@@ -17,16 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class S3Controller {
 
     Logger logger = Logger.getLogger(S3Controller.class);
-    
+
     @RequestMapping("/getS3")
-    public String getS3(@RequestParam("fileName") String fileName) {
+    public String getS3(@RequestParam("bucket") String bucket, @RequestParam("fileName") String fileName) {
         String time ="";
         ProfileCredentialsProvider profileCredentialsProvider = new ProfileCredentialsProvider("s3-readonly");
         logger.debug("AWS -KEY:" + profileCredentialsProvider.getCredentials().getAWSAccessKeyId());
         AmazonS3Client awsS3Client = new AmazonS3Client(profileCredentialsProvider);
         awsS3Client.setRegion(Region.getRegion(Regions.AP_NORTHEAST_2));
         try {
-            GetObjectMetadataRequest req = new GetObjectMetadataRequest("yikster-aws-icn", fileName);
+            GetObjectMetadataRequest req = new GetObjectMetadataRequest(bucket, fileName);
             ObjectMetadata objectMetadata = awsS3Client.getObjectMetadata(req);
             time = "objectMeta.lastModified:" + objectMetadata.getLastModified().getTime();
 
