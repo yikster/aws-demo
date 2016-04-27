@@ -1,4 +1,4 @@
-package hello;
+package net.yikster.demo.springboot;
 
 
 
