@@ -127,7 +127,7 @@ Resources:
                 stack_name = user_parameters.split("|")[0]
                 test_stack_name = user_parameters.split("|")[1]
                 stage = user_parameters.split("|")[2]
-
+                api_url = "none"
             #    print("looking for ApiUrl in {} Stack".format(stack_name))
             #    api_url, error = _get_property_from_stack(stack_name, "ApiUrl")
             #    if not api_url:
@@ -297,7 +297,7 @@ Resources:
                         RoleArn: !GetAtt CloudFormationExecutionRole.Arn
                         StackName: !Sub '${ServiceName}-Stack-Tests'
                         ChangeSetName: !Sub '${ServiceName}-ChangeSet-Tests'
-                        ParameterOverrides: '{ "ServiceName": "${ServiceName}" }'
+                        ParameterOverrides: !Sub '{ "ServiceName": "${ServiceName}" }'
                         TemplatePath: BuiltZip::test-output_sam.yaml
                         Capabilities: CAPABILITY_IAM
                       InputArtifacts:

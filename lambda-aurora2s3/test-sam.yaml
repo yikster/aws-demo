@@ -11,7 +11,7 @@ Resources:
   TestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: ${ServiceName}_TestFunctionA
+      FunctionName: !Join ["", [!Ref ServiceName, "TestFunctionA" ]]
       Handler: test_function.lambda_handler
       CodeUri: test/
       Runtime: python2.7
@@ -28,4 +28,4 @@ Outputs:
     Description: Test lambda function name
     Value: !Ref TestFunction
     Export:
-      Name: ${ServiceName}_TestFunction
+      Name: !Join ["", [!Ref ServiceName, "TestFunctionA" ]]
