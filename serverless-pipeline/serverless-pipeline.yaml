@@ -128,11 +128,11 @@ Resources:
                 test_stack_name = user_parameters.split("|")[1]
                 stage = user_parameters.split("|")[2]
 
-                print("looking for ApiUrl in {} Stack".format(stack_name))
-                api_url, error = _get_property_from_stack(stack_name, "ApiUrl")
-                if not api_url:
-                    _fail_job(job_id, error)
-                    return
+            #    print("looking for ApiUrl in {} Stack".format(stack_name))
+            #    api_url, error = _get_property_from_stack(stack_name, "ApiUrl")
+            #    if not api_url:
+            #        _fail_job(job_id, error)
+            #        return
 
                 print("looking for TestFunction in {} Stack".format(test_stack_name))
                 test_function, error = _get_property_from_stack(test_stack_name, "TestFunction")
@@ -297,6 +297,7 @@ Resources:
                         RoleArn: !GetAtt CloudFormationExecutionRole.Arn
                         StackName: !Sub '${ServiceName}-Stack-Tests'
                         ChangeSetName: !Sub '${ServiceName}-ChangeSet-Tests'
+                        ParameterOverrides: '{ "ServiceName": "${ServiceName}" }'
                         TemplatePath: BuiltZip::test-output_sam.yaml
                         Capabilities: CAPABILITY_IAM
                       InputArtifacts:
