@@ -319,7 +319,7 @@ Resources:
                       OutputArtifacts:
                         - Name: ExecutedTestChangeSet
                       RunOrder: 2
-                - Name: Beta
+                - Name: Dev
                   Actions:
                     - Name: CreateChangeSet
                       ActionTypeId:
@@ -330,11 +330,11 @@ Resources:
                       Configuration:
                         ActionMode: CHANGE_SET_REPLACE
                         RoleArn: !GetAtt CloudFormationExecutionRole.Arn
-                        StackName: !Sub '${ServiceName}-Stack-Beta'
-                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Beta'
+                        StackName: !Sub '${ServiceName}-Stack-Dev'
+                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Dev'
                         TemplatePath: BuiltZip::app-output_sam.yaml
                         Capabilities: CAPABILITY_IAM
-                        ParameterOverrides: '{ "Stage": "beta" }'
+                        ParameterOverrides: '{ "Stage": "dev" }'
                       InputArtifacts:
                         - Name: BuiltZip
                       RunOrder: 1
@@ -347,10 +347,10 @@ Resources:
                       Configuration:
                         ActionMode: CHANGE_SET_EXECUTE
                         RoleArn: !GetAtt CloudFormationExecutionRole.Arn
-                        StackName: !Sub '${ServiceName}-Stack-Beta'
-                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Beta'
+                        StackName: !Sub '${ServiceName}-Stack-Dev'
+                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Dev'
                       OutputArtifacts:
-                        - Name: !Sub '${ServiceName}BetaChangeSet'
+                        - Name: !Sub '${ServiceName}DevChangeSet'
                       RunOrder: 2
                     - Name: IntegrationTests
                       ActionTypeId:
@@ -360,11 +360,11 @@ Resources:
                         Version: 1
                       Configuration:
                         FunctionName: !Ref StartTestsFunction
-                        UserParameters: !Sub '${ServiceName}-Stack-Beta|${ServiceName}-Stack-Tests|beta'
+                        UserParameters: !Sub '${ServiceName}-Stack-Dev|${ServiceName}-Stack-Tests|dev'
                       InputArtifacts:
-                        - Name: !Sub '${ServiceName}BetaChangeSet'
+                        - Name: !Sub '${ServiceName}DevChangeSet'
                       RunOrder: 3
-                - Name: Gamma
+                - Name: Staging
                   Actions:
                     - Name: CreateChangeSet
                       ActionTypeId:
@@ -375,11 +375,11 @@ Resources:
                       Configuration:
                         ActionMode: CHANGE_SET_REPLACE
                         RoleArn: !GetAtt CloudFormationExecutionRole.Arn
-                        StackName: !Sub '${ServiceName}-Stack-Gamma'
-                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Gamma'
+                        StackName: !Sub '${ServiceName}-Stack-Staging'
+                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Staging'
                         TemplatePath: BuiltZip::app-output_sam.yaml
                         Capabilities: CAPABILITY_IAM
-                        ParameterOverrides: '{ "Stage": "gamma" }'
+                        ParameterOverrides: '{ "Stage": "staging" }'
                       InputArtifacts:
                         - Name: BuiltZip
                       RunOrder: 1
@@ -392,10 +392,10 @@ Resources:
                       Configuration:
                         ActionMode: CHANGE_SET_EXECUTE
                         RoleArn: !GetAtt CloudFormationExecutionRole.Arn
-                        StackName: !Sub '${ServiceName}-Stack-Gamma'
-                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Gamma'
+                        StackName: !Sub '${ServiceName}-Stack-Staging'
+                        ChangeSetName: !Sub '${ServiceName}-ChangeSet-Staging'
                       OutputArtifacts:
-                        - Name: !Sub '${ServiceName}GammaChangeSet'
+                        - Name: !Sub '${ServiceName}StagingChangeSet'
                       RunOrder: 2
                     - Name: IntegrationTests
                       ActionTypeId:
@@ -405,9 +405,9 @@ Resources:
                         Version: 1
                       Configuration:
                         FunctionName: !Ref StartTestsFunction
-                        UserParameters: !Sub '${ServiceName}-Stack-Gamma|${ServiceName}-Stack-Tests|gamma'
+                        UserParameters: !Sub '${ServiceName}-Stack-Staging|${ServiceName}-Stack-Tests|staging'
                       InputArtifacts:
-                        - Name: !Sub '${ServiceName}GammaChangeSet'
+                        - Name: !Sub '${ServiceName}StagingChangeSet'
                       RunOrder: 3
                 - Name: Prod
                   Actions:

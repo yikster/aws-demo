@@ -1,0 +1,14 @@
+{
+  "name": "aurora2s3",
+  "version": "1.0.0",
+  "description": "put a record that is inserted to aurora database",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kyoungsu, Lee",
+  "license": "ISC",
+  "dependencies": {
+    "sequelize": "^4.8.2"
+  }
+}
