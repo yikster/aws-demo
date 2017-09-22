@@ -3,7 +3,7 @@ Description: Startup Kit RESTful API backed by a SimpleTable (DynamoDB).
 Resources:
   CreateFunction:
     Properties:
-      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      CodeUri: s3://accountno-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
       Environment:
         Variables:
           TABLE_NAME:
@@ -22,7 +22,7 @@ Resources:
     Type: AWS::Serverless::Function
   DeleteCompleteFunction:
     Properties:
-      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      CodeUri: s3://accountno-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
       Environment:
         Variables:
           TABLE_NAME:
@@ -40,7 +40,7 @@ Resources:
     Type: AWS::Serverless::Function
   GetActiveFunction:
     Properties:
-      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      CodeUri: s3://accountno-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
       Environment:
         Variables:
           TABLE_NAME:
@@ -58,7 +58,7 @@ Resources:
     Type: AWS::Serverless::Function
   GetAllFunction:
     Properties:
-      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      CodeUri: s3://accountno-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
       Environment:
         Variables:
           TABLE_NAME:
@@ -76,7 +76,7 @@ Resources:
     Type: AWS::Serverless::Function
   GetCompleteFunction:
     Properties:
-      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      CodeUri: s3://accountno-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
       Environment:
         Variables:
           TABLE_NAME:
@@ -94,7 +94,7 @@ Resources:
     Type: AWS::Serverless::Function
   MarkCompleteFunction:
     Properties:
-      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      CodeUri: s3://accountno-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
       Environment:
         Variables:
           TABLE_NAME:
@@ -121,7 +121,7 @@ Resources:
     Type: AWS::Serverless::SimpleTable
   UpdateActiveFunction:
     Properties:
-      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      CodeUri: s3://accountno-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
       Environment:
         Variables:
           TABLE_NAME:
