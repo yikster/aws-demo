@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Startup Kit RESTful API backed by a SimpleTable (DynamoDB).
+Resources:
+  CreateFunction:
+    Properties:
+      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        PostResource:
+          Properties:
+            Method: post
+            Path: /todo/new
+          Type: Api
+      FunctionName: StartupKitCreateFunction
+      Handler: index.create
+      Policies: AmazonDynamoDBFullAccess
+      Runtime: nodejs6.10
+      Timeout: 20
+    Type: AWS::Serverless::Function
+  DeleteCompleteFunction:
+    Properties:
+      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        DeleteResource:
+          Properties:
+            Method: delete
+            Path: /todo/complete
+          Type: Api
+      FunctionName: StartupKitDeleteCompleteFunction
+      Handler: index.deleteComplete
+      Policies: AmazonDynamoDBFullAccess
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  GetActiveFunction:
+    Properties:
+      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        GetResource:
+          Properties:
+            Method: get
+            Path: /todo/active
+          Type: Api
+      FunctionName: StartupKitGetActiveFunction
+      Handler: index.getActive
+      Policies: AmazonDynamoDBReadOnlyAccess
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  GetAllFunction:
+    Properties:
+      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        GetResource:
+          Properties:
+            Method: get
+            Path: /todo/all
+          Type: Api
+      FunctionName: StartupKitGetAllFunction
+      Handler: index.getAll
+      Policies: AmazonDynamoDBReadOnlyAccess
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  GetCompleteFunction:
+    Properties:
+      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        GetResource:
+          Properties:
+            Method: get
+            Path: /todo/complete
+          Type: Api
+      FunctionName: StartupKitGetCompleteFunction
+      Handler: index.getComplete
+      Policies: AmazonDynamoDBReadOnlyAccess
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  MarkCompleteFunction:
+    Properties:
+      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        PutResource:
+          Properties:
+            Method: put
+            Path: /todo/complete
+          Type: Api
+      FunctionName: StartupKitMarkCompleteFunction
+      Handler: index.markComplete
+      Policies: AmazonDynamoDBFullAccess
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  Table:
+    Properties:
+      PrimaryKey:
+        Name: todo_id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+    Type: AWS::Serverless::SimpleTable
+  UpdateActiveFunction:
+    Properties:
+      CodeUri: s3://519590242672-startup-kit-serverless-todo-app/e68de5c347be26bf1535abb0415f399a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        PutResource:
+          Properties:
+            Method: put
+            Path: /todo/active
+          Type: Api
+      FunctionName: StartupKitUpdateActiveFunction
+      Handler: index.updateActive
+      Policies: AmazonDynamoDBFullAccess
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31

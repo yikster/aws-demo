@@ -1,0 +1,5 @@
+{
+  "awsRegion": "ap-northeast-2",
+  "body" :
+  "{\"todo_id\": \"1001\", \"active\": true, \"description\": \"What TODO next?\"}"
+}
