@@ -1,4 +1,4 @@
-# aws-demo
+# apigateway-lambda-dynamodb
 Show simpleway to build serverless application with apigateway-lambda-dynamodb
 
 # aws-resources
