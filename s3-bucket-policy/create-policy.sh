@@ -10,7 +10,7 @@ esac
 done
 
 if [ -z "$BUCKET_NAME" ] || [ -z "$POLICY_NAME" ]; then
-	echo "Usage ./set-policy-user.sh -b BUCKET_NAME -p POLICY_NAME"
+	echo "Usage ./create-policy.sh -b BUCKET_NAME -p POLICY_NAME"
 	exit 0;
 fi
 POLICY_DOCUMENT="{ \
