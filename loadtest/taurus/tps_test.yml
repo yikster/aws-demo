@@ -2,10 +2,11 @@ execution:
 - concurrency: 10
   ramp-up: 1m
   hold-for: 5m
-  scenario: quick-test
+  throughput: 5
+  scenario: quick-test-tps
 
 scenarios:
-  quick-test:
+  quick-test-tps:
     requests:
     - http://blazedemo.com
 
