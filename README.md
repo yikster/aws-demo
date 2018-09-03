@@ -4,6 +4,9 @@ Show simpleway to build serverless application with apigateway-lambda-dynamodb
 # aws-resources
 Get all expensive resources in all regions, EC2, DynamoDB Tables, RDS, EBS, ELBs, ...
 
+# guardduty/guardduty2es
+Send guardduty logs to ElasticSearch for kibana dashboard, ex> Show how many trials happened from where
+
 # lambda-aurora2s3
 Sync updated records from Aurora into S3
 
