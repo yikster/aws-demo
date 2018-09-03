@@ -12,3 +12,6 @@ Replicate dynamodb event records into another dynamodb table
 
 # urlcapture
 Capture urls with serverless, it based on  https://github.com/aoyama-val/webshot
+
+# s3-bucket-policy
+Set specific s3 bucket GetObject/DeleteObject/PutObject for a user, Create user and attach policy to the user---
