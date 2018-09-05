@@ -1,3 +1,7 @@
+# Prerequsite
+Set up aws credentials for using profiles in applications or scripts
+https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html 
+
 # apigateway-lambda-dynamodb
 Show simpleway to build serverless application with apigateway-lambda-dynamodb
 
