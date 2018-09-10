@@ -8,6 +8,9 @@ Show simpleway to build serverless application with apigateway-lambda-dynamodb
 # aws-resources
 Get all expensive resources in all regions, EC2, DynamoDB Tables, RDS, EBS, ELBs, ...
 
+# emr
+Create emr and convert 1TB ELB logs file to 130 GB Parquet under 1 hour.
+
 # guardduty/guardduty2es
 Send guardduty logs to ElasticSearch for kibana dashboard, ex> Show how many trials happened from where
 
