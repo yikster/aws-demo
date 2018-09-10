@@ -1,0 +1,7 @@
+#!/bin/bash
+CLUSTER_NAME="$1"
+SUBNET_AP_NORTHEAST_2C=subnet-83fb23ce
+SUBNET_AP_NORTHEAST_2A=subnet-8068f2e9
+AWS_PROFILE="$3"
+echo "${AWS_PROFILE}"
+./create-emr.sh r3.2x-"${CLUSTER_NAME}" r3.2xlarge $2 m4.xlarge "${SUBNET_AP_NORTHEAST_2A}" sg-17294b7c sg-ab284ac0 ICN-HOME 10g 10g 8 200 "${AWS_PROFILE}"
