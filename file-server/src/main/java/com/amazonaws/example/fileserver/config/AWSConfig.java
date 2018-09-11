@@ -60,7 +60,7 @@ public class AWSConfig {
 	}
 
 	@Bean
-	public AmazonS3 s3Client() {
+	public AmazonS3 amazonS3() {
 		AmazonS3 client = null;
 		AmazonS3ClientBuilder builder = null;;
 
