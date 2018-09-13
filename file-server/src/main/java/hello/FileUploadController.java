@@ -77,6 +77,7 @@ public class FileUploadController {
             s3Repository.store(bucket, objectKey, file.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
+            // TODO add SNS notification or add SQS or add SES failure
         }
 
         // TODO

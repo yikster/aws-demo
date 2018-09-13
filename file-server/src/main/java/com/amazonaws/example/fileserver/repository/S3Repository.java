@@ -25,15 +25,6 @@ public class S3Repository {
 	@Autowired
 	private AmazonS3 amazonS3;
 
-	@Value("${amazon.aws.amazonS3.outbound.bucketname}")
-	private String outboundBucketName;
-		
-	@Value("${amazon.aws.amazonS3.inbound.bucketname}")
-	private String inboundBucketName;
-
-	
-
-
 	public String store(String bucket, String objectKey, InputStream inputStream) {
 
 		ObjectMetadata objectMetadata = new ObjectMetadata();
@@ -41,16 +32,4 @@ public class S3Repository {
 		return requestResult.getETag();
 	}
 
-
-	public List<S3ObjectSummary> listOutboundObjects() {
-		ListObjectsV2Result result = amazonS3.listObjectsV2(outboundBucketName);
-		List<S3ObjectSummary> objects = result.getObjectSummaries();
-		return objects;
-	}
-
-	public List<S3ObjectSummary> listInboundObjects() {
-		ListObjectsV2Result result = amazonS3.listObjectsV2(inboundBucketName);
-		List<S3ObjectSummary> objects = result.getObjectSummaries();
-		return objects;
-	}
 }

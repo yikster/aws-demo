@@ -30,30 +30,6 @@ public class AWSConfig {
 	
 	private static final Log log = LogFactory.getLog(AWSConfig.class);
 	
-	@Value("${amazon.dynamodb.endpoint}")
-	private String amazonDynamoDBEndpoint;
-
-	@Value("${amazon.aws.accesskey}")
-	private String amazonAWSAccessKey;
-
-	@Value("${amazon.aws.secretkey}")
-	private String amazonAWSSecretKey;
-
-	@Value("${amazon.aws.s3.accesskey}")
-	private String amazonAWSS3AccessKey;
-
-	@Value("${amazon.aws.s3.secretkey}")
-	private String amazonAWSS3SecretKey;
-
-	@Value("${amazon.dynamodb.region}")
-	private String dynamodbRegion;
-
-	@Value("${amazon.dynamodb.tablename}")
-	private String tableName;
-	
-	@Value("${amazon.aws.s3.region}")
-	private String s3RegionName;
-
 	@Bean
 	public DynamoDBMapper dynamoDBMapper() {
 		return new DynamoDBMapper(amazonDynamoDB());
@@ -61,47 +37,13 @@ public class AWSConfig {
 
 	@Bean
 	public AmazonS3 amazonS3() {
-		AmazonS3 client = null;
-		AmazonS3ClientBuilder builder = null;;
-
-		// if no credential information is set in the properties file do nothing
-		if (StringUtils.isEmpty(amazonAWSS3AccessKey) || StringUtils.isEmpty(amazonAWSS3SecretKey)) {
-			builder = AmazonS3ClientBuilder.standard();
-			// if credential information is set, use it
-		} else {
-			BasicAWSCredentials awsCreds = new BasicAWSCredentials(amazonAWSS3AccessKey, amazonAWSS3SecretKey);
-			builder = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(awsCreds));
-		}
-
-		builder.setRegion(s3RegionName);
-		client = builder.build();
-
-		return client;
+		return AmazonS3ClientBuilder.standard().build();
 	}
 
 
 	@Bean
 	public AmazonDynamoDB amazonDynamoDB() {
-		AmazonDynamoDB client = null;
-		AmazonDynamoDBClientBuilder builder = null;
-
-		// if no credential information is set in the properties file do nothing
-		if (StringUtils.isEmpty(amazonAWSAccessKey) || StringUtils.isEmpty(amazonAWSSecretKey)) {
-			builder = AmazonDynamoDBClientBuilder.standard();
-			// if credential information is set, use it
-		} else {
-			BasicAWSCredentials awsCreds = new BasicAWSCredentials(amazonAWSAccessKey, amazonAWSSecretKey);
-			builder = AmazonDynamoDBClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(awsCreds));
-		}
-		System.out.println("Region:" + dynamodbRegion);
-		client = builder.withRegion(dynamodbRegion).build();
-		
-		// if endpoint is set for local dynamodb
-		if (!StringUtils.isEmpty(amazonDynamoDBEndpoint)) {
-			client.setEndpoint(amazonDynamoDBEndpoint);
-		}
-
-		return client;
+		return AmazonDynamoDBClientBuilder.standard().build();
 	}
 
 }
