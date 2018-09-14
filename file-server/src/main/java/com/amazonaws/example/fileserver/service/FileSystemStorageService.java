@@ -1,6 +1,7 @@
 package com.amazonaws.example.fileserver.service;
 
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -34,7 +35,9 @@ public class FileSystemStorageService implements StorageService {
     @Override
     public void store(MultipartFile file) {
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
-
+        if(false == rootLocation.toFile().exists()) {
+            throw new StorageException("Cannot find upload path, check upload url");
+        }
         try {
             if (file.isEmpty()) {
                 throw new StorageException("Failed to store empty file " + filename);

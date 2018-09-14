@@ -2,6 +2,7 @@ package com.amazonaws.example.fileserver.config;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +20,10 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 public class AWSConfig {
 	
 	private static final Log log = LogFactory.getLog(AWSConfig.class);
-	
+
+	@Value("${aws.region:ap-northeast-2}")
+	String region;
+
 	@Bean
 	public DynamoDBMapper dynamoDBMapper() {
 		return new DynamoDBMapper(amazonDynamoDB());
@@ -27,13 +31,13 @@ public class AWSConfig {
 
 	@Bean
 	public AmazonS3 amazonS3() {
-		return AmazonS3ClientBuilder.standard().build();
+		return AmazonS3ClientBuilder.standard().withRegion(region).build();
 	}
 
 
 	@Bean
 	public AmazonDynamoDB amazonDynamoDB() {
-		return AmazonDynamoDBClientBuilder.standard().build();
+		return AmazonDynamoDBClientBuilder.standard().withRegion(region).build();
 	}
 
 	@ConfigurationProperties("storage")

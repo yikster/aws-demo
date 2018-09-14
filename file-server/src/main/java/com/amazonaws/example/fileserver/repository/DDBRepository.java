@@ -24,6 +24,8 @@ public class DDBRepository {
 	private DynamoDBMapper mapper;
 
 	public void addNewFileRecord(FileInfo fileInfo) {
+		if(null == fileInfo.getCreatedAt() || 0 == fileInfo.getCreatedAt())
+			fileInfo.setCreatedAt(System.currentTimeMillis());
 		mapper.save(fileInfo);
 
 	}

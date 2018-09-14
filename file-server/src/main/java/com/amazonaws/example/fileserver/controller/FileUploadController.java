@@ -51,7 +51,7 @@ public class FileUploadController {
                         "serveFile", path.getFileName().toString()).build().toString())
                 .collect(Collectors.toList()));
         */
-        return "resource:uploadForm";
+        return "uploadForm";
     }
 
     @GetMapping("/files/{filename:.+}")

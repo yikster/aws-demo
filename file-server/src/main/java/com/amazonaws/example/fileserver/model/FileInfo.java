@@ -12,6 +12,7 @@ public class FileInfo {
     private String bucket;
     private String objectKey;
     private Long size;
+    private Long createdAt;
 
     public FileInfo() {
     }
@@ -46,6 +47,9 @@ public class FileInfo {
     @DynamoDBAttribute
     public Long getSize() { return size; }
 
+    @DynamoDBAttribute
+    public Long getCreatedAt() { return createdAt; }
+
     public void setGuid(String guid) {
         this.guid = guid;
     }
@@ -62,4 +66,6 @@ public class FileInfo {
     public void setSize(Long size) {
         this.size = size;
     }
+
+    public void setCreatedAt(Long creatdAt) {this.createdAt = creatdAt; }
 }
