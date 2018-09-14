@@ -1,12 +1,48 @@
 package com.amazonaws.example.fileserver.repository;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.amazonaws.example.fileserver.model.FileInfo;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
-public interface DDBRepository {
-	List<FileInfo> scan();
-	List<FileInfo> getByGuid(String guid);
-	void addNewFileRecord(FileInfo fileInfo);
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+
+@Component("ddbRepository")
+public class DDBRepository {
+	private static final Log log = LogFactory.getLog(DDBRepository.class);
+
+	@Autowired
+	private DynamoDBMapper mapper;
+
+	public void addNewFileRecord(FileInfo fileInfo) {
+		mapper.save(fileInfo);
+
+	}
+
+	public List<FileInfo> getByGuid(String guid) {
+
+		Map<String, AttributeValue> eav = new HashMap<>();
+		eav.put(":v1", new AttributeValue().withS(guid));
+
+		DynamoDBQueryExpression<FileInfo> queryExpression = new DynamoDBQueryExpression<FileInfo>()
+				.withKeyConditionExpression("guid = :v1").withExpressionAttributeValues(eav);
+
+		List<FileInfo> list = mapper.query(FileInfo.class, queryExpression);
+		return list;
+	}
+
+	public List<FileInfo> scan() {
+
+		return mapper.scan(FileInfo.class, new DynamoDBScanExpression());
+	}
 
 }

@@ -17,6 +17,9 @@ package hello.storage;
 
 import java.util.Random;
 
+import com.amazonaws.example.fileserver.config.AWSConfig;
+import com.amazonaws.example.fileserver.service.FileSystemStorageService;
+import com.amazonaws.example.fileserver.exception.StorageException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class FileSystemStorageServiceTests {
 
-    private StorageProperties properties = new StorageProperties();
+    private AWSConfig.StorageProperties properties = new AWSConfig.StorageProperties();
     private FileSystemStorageService service;
 
     @Before

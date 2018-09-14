@@ -1,6 +1,5 @@
-package hello;
+package com.amazonaws.example.fileserver.controller;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.stream.Collectors;
 
@@ -23,8 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import hello.storage.StorageFileNotFoundException;
-import hello.storage.StorageService;
+import com.amazonaws.example.fileserver.exception.StorageFileNotFoundException;
+import com.amazonaws.example.fileserver.service.StorageService;
 
 @Controller
 public class FileUploadController {
@@ -46,12 +45,13 @@ public class FileUploadController {
     @GetMapping("/")
     public String listUploadedFiles(Model model) throws IOException {
 
+        /*
         model.addAttribute("files", storageService.loadAll().map(
                 path -> MvcUriComponentsBuilder.fromMethodName(FileUploadController.class,
                         "serveFile", path.getFileName().toString()).build().toString())
                 .collect(Collectors.toList()));
-
-        return "uploadForm";
+        */
+        return "resource:uploadForm";
     }
 
     @GetMapping("/files/{filename:.+}")
@@ -72,6 +72,7 @@ public class FileUploadController {
         storageService.store(file);
 
 
+
         // TODO
         try {
             s3Repository.store(bucket, objectKey, file.getInputStream());
@@ -79,7 +80,6 @@ public class FileUploadController {
             e.printStackTrace();
             // TODO add SNS notification or add SQS or add SES failure
         }
-
         // TODO
         ddbRepository.addNewFileRecord(new FileInfo(bucket, file.getOriginalFilename(), file.getSize()));
 
