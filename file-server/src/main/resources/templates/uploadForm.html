@@ -22,6 +22,16 @@
 				<a th:href="${file}" th:text="${file}" />
 			</li>
 		</ul>
+		<ul>
+			<li th:each="file : ${bucketFiles}">
+				<a th:href="${file}"  th:text="${file.key + ' - ' + file.size }" />
+			</li>
+		</ul>
+		<ul>
+			<li th:each="file : ${DynamoDBFiles}">
+				<a th:href="${file}" th:text="${file.guid + ' - ' + file.objectKey + ' - ' + file.size}" />
+			</li>
+		</ul>
 	</div>
 
 </body>

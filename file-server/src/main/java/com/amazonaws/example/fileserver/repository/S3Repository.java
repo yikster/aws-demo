@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.amazonaws.services.s3.model.*;
@@ -30,6 +31,10 @@ public class S3Repository {
 		ObjectMetadata objectMetadata = new ObjectMetadata();
 		PutObjectResult requestResult = amazonS3.putObject(bucket, objectKey, inputStream, objectMetadata);
 		return requestResult.getETag();
+	}
+
+	public List<S3ObjectSummary> objectList(String bucket) {
+		return amazonS3.listObjectsV2(bucket).getObjectSummaries();
 	}
 
 }

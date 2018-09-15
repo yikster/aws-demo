@@ -43,14 +43,17 @@ public class FileUploadController {
     }
 
     @GetMapping("/")
-    public String listUploadedFiles(Model model) throws IOException {
+    public String listUploadedFiles(@RequestParam("bucket") String bucket,
+                                                Model model) throws IOException {
 
-        /*
+
         model.addAttribute("files", storageService.loadAll().map(
                 path -> MvcUriComponentsBuilder.fromMethodName(FileUploadController.class,
                         "serveFile", path.getFileName().toString()).build().toString())
                 .collect(Collectors.toList()));
-        */
+        model.addAttribute( "bucketFiles", s3Repository.objectList(bucket));
+        model.addAttribute("DynamoDBFiles", ddbRepository.scan());
+
         return "uploadForm";
     }
 
@@ -86,7 +89,7 @@ public class FileUploadController {
         redirectAttributes.addFlashAttribute("message",
                 "You successfully uploaded " + file.getOriginalFilename() + "!");
 
-        return "redirect:/";
+        return "redirect:/?bucket=" + bucket;
     }
 
     @ExceptionHandler(StorageFileNotFoundException.class)
