@@ -37,4 +37,7 @@ public class S3Repository {
 		return amazonS3.listObjectsV2(bucket).getObjectSummaries();
 	}
 
+	public void delete(String bucket, String objectKey) {
+		amazonS3.deleteObject(bucket, objectKey);
+	}
 }

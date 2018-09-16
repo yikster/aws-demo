@@ -47,4 +47,9 @@ public class DDBRepository {
 		return mapper.scan(FileInfo.class, new DynamoDBScanExpression());
 	}
 
+	public void deleteByGuid(String guid) {
+		FileInfo fileInfo = new FileInfo();
+		fileInfo.setGuid(guid);
+		mapper.delete(fileInfo);
+	}
 }

@@ -1,5 +1,20 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
+<script th:inline="javascript">
+/*<![CDATA[*/
+
+function deleteFile(objectKey, guid) {
+	if(
+		confirm("Do you really want to delete the file :\n" + objectKey)
+		) {
+			document.getElementById("objectKey").value = objectKey;
+			document.getElementById("guid").value = guid;
+			document.getElementById("deleteForm").submit();
+	}
+}
+
+/* ]]> */
+</script>
 
 	<div th:if="${message}">
 		<h2 th:text="${message}"/>
@@ -29,9 +44,16 @@
 		</ul>
 		<ul>
 			<li th:each="file : ${DynamoDBFiles}">
-				<a th:href="${file}" th:text="${file.guid + ' - ' + file.objectKey + ' - ' + file.size}" />
+				<span th:text="${file.guid + ' - ' + file.objectKey + ' - ' + file.size}" /> <a th:href="${ 'javascript:deleteFile(''' + file.objectKey + ''',''' + file.guid + ''')' }" >delete</a>
 			</li>
 		</ul>
+	</div>
+	<div>
+		<form id="deleteForm" method="POST" action="/delete">
+			<input type="hidden" id="bucket" name="bucket" th:value="${param.bucket}">
+			<input type="hidden" id="objectKey" name="objectKey">
+			<input type="hidden" id="guid" name="guid">
+		</form>
 	</div>
 
 </body>

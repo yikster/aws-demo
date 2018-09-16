@@ -12,12 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -42,6 +37,20 @@ public class FileUploadController {
         this.storageService = storageService;
     }
 
+
+    @PostMapping("/delete")
+    public String deleteFile(@RequestParam("bucket") String bucket,
+                             @RequestParam("objectKey") String objectKey,
+                             @RequestParam("guid") String guid,
+                             Model model) throws IOException {
+        storageService.delete(objectKey);
+
+        // TODO need to add additional key, sort key is maybe createdAt
+        // ddbRepository.deleteByGuid(guid);
+        s3Repository.delete(bucket, objectKey);
+
+        return listUploadedFiles(bucket, model );
+    }
     @GetMapping("/")
     public String listUploadedFiles(@RequestParam("bucket") String bucket,
                                                 Model model) throws IOException {
