@@ -96,7 +96,7 @@ public class FileUploadController {
         }
         // TODO
         String newGuid = UUID.randomUUID().toString();
-        ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, file.getOriginalFilename(), file.getSize()));
+        ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, objectKey, file.getSize()));
 
         redirectAttributes.addFlashAttribute("message",
                 "You successfully uploaded " + file.getOriginalFilename() + "!");
