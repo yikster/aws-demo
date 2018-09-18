@@ -24,22 +24,26 @@ public class DDBRepository {
 	private DynamoDBMapper mapper;
 
 	public void addNewFileRecord(FileInfo fileInfo) {
-		if(null == fileInfo.getCreatedAt() || 0 == fileInfo.getCreatedAt())
-			fileInfo.setCreatedAt(System.currentTimeMillis());
+//		if(null == fileInfo.getCreatedAt() || 0 == fileInfo.getCreatedAt())
+		fileInfo.setCreatedAt(System.currentTimeMillis());
 		mapper.save(fileInfo);
 
 	}
 
-	public List<FileInfo> getByGuid(String guid) {
+	public FileInfo getByGuid(String guid) {
 
 		Map<String, AttributeValue> eav = new HashMap<>();
+
 		eav.put(":v1", new AttributeValue().withS(guid));
 
 		DynamoDBQueryExpression<FileInfo> queryExpression = new DynamoDBQueryExpression<FileInfo>()
 				.withKeyConditionExpression("guid = :v1").withExpressionAttributeValues(eav);
 
 		List<FileInfo> list = mapper.query(FileInfo.class, queryExpression);
-		return list;
+		if(1 == list.size())
+			return list.get(0);
+
+		return null;
 	}
 
 	public List<FileInfo> scan() {
@@ -47,9 +51,15 @@ public class DDBRepository {
 		return mapper.scan(FileInfo.class, new DynamoDBScanExpression());
 	}
 
-	public void deleteByGuid(String guid) {
-		FileInfo fileInfo = new FileInfo();
-		fileInfo.setGuid(guid);
+	public void deleteOne(String guid) {
+		FileInfo fileInfo = getByGuid(guid);
+		log.info("Find file:" + fileInfo);
+		if(null != fileInfo) {
+			deleteOne(fileInfo);
+		}
+	}
+
+	public void deleteOne(FileInfo fileInfo) {
 		mapper.delete(fileInfo);
 	}
 }

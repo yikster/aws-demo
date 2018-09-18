@@ -1,6 +1,8 @@
 package com.amazonaws.example.fileserver.controller;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.amazonaws.example.fileserver.model.FileInfo;
@@ -46,7 +48,7 @@ public class FileUploadController {
         storageService.delete(objectKey);
 
         // TODO need to add additional key, sort key is maybe createdAt
-        // ddbRepository.deleteByGuid(guid);
+        ddbRepository.deleteOne(guid);
         s3Repository.delete(bucket, objectKey);
 
         return listUploadedFiles(bucket, model );
@@ -93,7 +95,8 @@ public class FileUploadController {
             // TODO add SNS notification or add SQS or add SES failure
         }
         // TODO
-        ddbRepository.addNewFileRecord(new FileInfo(bucket, file.getOriginalFilename(), file.getSize()));
+        String newGuid = UUID.randomUUID().toString();
+        ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, file.getOriginalFilename(), file.getSize()));
 
         redirectAttributes.addFlashAttribute("message",
                 "You successfully uploaded " + file.getOriginalFilename() + "!");
