@@ -45,7 +45,9 @@ public class FileUploadController {
                              @RequestParam("objectKey") String objectKey,
                              @RequestParam("guid") String guid,
                              Model model) throws IOException {
-        storageService.delete(objectKey);
+
+        FileInfo fileInfo = ddbRepository.getByGuid(guid);
+        storageService.delete(fileInfo.getFilePath());
 
         // TODO need to add additional key, sort key is maybe createdAt
         ddbRepository.deleteOne(guid);
@@ -96,7 +98,7 @@ public class FileUploadController {
         }
         // TODO
         String newGuid = UUID.randomUUID().toString();
-        ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, objectKey, file.getSize()));
+        ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, objectKey, file.getOriginalFilename(), file.getSize()));
 
         redirectAttributes.addFlashAttribute("message",
                 "You successfully uploaded " + file.getOriginalFilename() + "!");

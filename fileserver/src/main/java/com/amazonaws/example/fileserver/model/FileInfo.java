@@ -8,6 +8,7 @@ public class FileInfo {
     private String guid;
     private String bucket;
     private String objectKey;
+    private String filePath;
     private Long size;
     private Long createdAt;
 
@@ -30,11 +31,12 @@ public class FileInfo {
         this.createdAt = createdAt;
     }
 
-    public FileInfo(String guid, String bucket, String objectKey, long size) {
+    public FileInfo(String guid, String bucket, String objectKey, String filePath, long size) {
         this.guid = guid;
         this.bucket = bucket;
         this.objectKey = objectKey;
         this.size = size;
+        this.filePath = filePath;
     }
 
     @DynamoDBHashKey(attributeName = "guid")
@@ -66,6 +68,12 @@ public class FileInfo {
     public Long getSize() { return size; }
     public void setSize(Long size) {
         this.size = size;
+    }
+
+    @DynamoDBAttribute
+    public String getFilePath() { return filePath; }
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 
     @DynamoDBRangeKey(attributeName = "createdAt")

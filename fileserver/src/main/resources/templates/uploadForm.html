@@ -32,16 +32,19 @@ function deleteFile(objectKey, guid) {
 	</div>
 
 	<div>
+		<span>Files on FileSystem(NFS/EFS)</span>
 		<ul>
 			<li th:each="file : ${files}">
 				<a th:href="${file}" th:text="${file}" />
 			</li>
 		</ul>
+		<span>Objects on S3</span>
 		<ul>
 			<li th:each="file : ${bucketFiles}">
 				<a th:href="${file}"  th:text="${file.key + ' - ' + file.size }" />
 			</li>
 		</ul>
+		<span>Records on DynamoDB</span>
 		<ul>
 			<li th:each="file : ${DynamoDBFiles}">
 				<span th:text="${file.guid + ' - ' + file.objectKey + ' - ' + file.size}" /> <a th:href="${ 'javascript:deleteFile(''' + file.objectKey + ''',''' + file.guid + ''')' }" >delete</a>
