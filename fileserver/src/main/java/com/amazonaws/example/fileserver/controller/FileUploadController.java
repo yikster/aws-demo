@@ -87,14 +87,13 @@ public class FileUploadController {
 
 
 
-        // TODO
         try {
             s3Repository.store(bucket, objectKey, file.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
             // TODO add SNS notification or add SQS or add SES failure
         }
-        // TODO
+
         String newGuid = UUID.randomUUID().toString();
         ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, objectKey, file.getSize()));
 
