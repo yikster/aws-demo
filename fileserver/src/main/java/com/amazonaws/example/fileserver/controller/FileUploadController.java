@@ -85,8 +85,7 @@ public class FileUploadController {
                                    @RequestParam("objectKey") String objectKey,
                                    RedirectAttributes redirectAttributes) {
 
-        storageService.store(file);
-
+        String savedFileName = storageService.store(file);
 
 
         try {
@@ -97,7 +96,7 @@ public class FileUploadController {
         }
 
         String newGuid = UUID.randomUUID().toString();
-        ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, objectKey, file.getOriginalFilename(), file.getSize()));
+        ddbRepository.addNewFileRecord(new FileInfo(newGuid, bucket, objectKey, savedFileName, file.getSize()));
 
         redirectAttributes.addFlashAttribute("message",
                 "You successfully uploaded " + file.getOriginalFilename() + "!");

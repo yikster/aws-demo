@@ -1,0 +1,18 @@
+execution:
+- concurrency: 10
+  ramp-up: 1m
+  hold-for: 5m
+  throughput: 5
+  scenario: upload-req
+
+scenarios:
+  upload-req: 
+    requests:
+    - url: http://localhost:8080/  # url to hit
+      method: POST 
+      body:
+        bucket: ks-test-icn
+        objectKey: uploadfile-test.yml
+      upload-files:  # attach files to form (and enable multipart/form-data)
+      - param: file  # form parameter name
+        path: fileupload_test.yml
