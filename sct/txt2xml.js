@@ -13,7 +13,7 @@ console.log('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE mapper PUBLIC "-//m
 reader.on('line', function (line) {
 	line = line.replace(/\s\s+/g, ' ');
         if(line.endsWith(", ")) {
-            line = line.replace(/\:[1-9][0-9][0-9] , /g, '') + ':101 )'
+            line = line.replace(/(\:[1-9][0-9] , )+(\:[1-9][0-9][0-9] , )+/g, '') + ':10 )'
         }
 	console.log('<select id=ext_sql_id_"' + linenumber++ + '" >' + line + '</select>');
 }).on('close', function(line) {
