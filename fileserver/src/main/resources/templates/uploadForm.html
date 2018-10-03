@@ -48,6 +48,7 @@ function deleteFile(objectKey, guid) {
 		<ul>
 			<li th:each="file : ${DynamoDBFiles}">
 				<span th:text="${file.guid + ' - ' + file.objectKey + ' - ' + file.size}" /> <a th:href="${ 'javascript:deleteFile(''' + file.objectKey + ''',''' + file.guid + ''')' }" >delete</a>
+				<a th:href="${ '/download?guid=' + file.guid }" >download</a>
 			</li>
 		</ul>
 	</div>

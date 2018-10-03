@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Properties;
 import java.util.stream.Stream;
 
 import com.amazonaws.example.fileserver.config.AWSConfig;
@@ -27,7 +28,11 @@ public class FileSystemStorageService implements StorageService {
 
     private final Path rootLocation;
 
-    @Autowired
+
+    public FileSystemStorageService() {
+        String properties = new AWSConfig.StorageProperties().getLocation();
+        this.rootLocation = Paths.get(properties);
+    }
     public FileSystemStorageService(AWSConfig.StorageProperties properties) {
         this.rootLocation = Paths.get(properties.getLocation());
     }
