@@ -8,8 +8,12 @@ for root, dirs, files in os.walk('.'):
         print (root)
         if file.endswith(".xml"):
             full_path = os.path.join(root, file)
+            data = ""
+            with open(full_path, 'r') as myfile:
+                data=myfile.read()
             print (full_path)
-            root = ET.parse(full_path)
+            print (len(data))
+            root = ET.fromstring(data)
             #root.findall(".")
             #root = tree.getroot()
             #print(root.iter("statement"))
