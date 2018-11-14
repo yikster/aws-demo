@@ -28,3 +28,11 @@ Set specific s3 bucket GetObject/DeleteObject/PutObject for a user, Create user 
 
 # copyS3toEFS
 TODO cloudformation for copy S3 files to EFS, set a c5.18xl ec2 for 25Gbps network, EFS and S3 all use networks.
+
+# CICD
+TODO create project with codestar nodejs/java
+TODO create codedeploy and autoscaling for nodejs/java
+TODO add manual approve stage to codepipeline
+TODO add prod_deploy stage to codepipeline 
+TODO add codedeploy action on prod_deploy 
+TODO add static code analyze stage to codepipeline 
