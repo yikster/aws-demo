@@ -2,55 +2,48 @@
 
 import boto3
 import json
+import sys
 
 pl = boto3.client('codepipeline')
 iam = boto3.client('iam')
 
-IAM_SNS_PUBLISH = {
-            "Effect": "Allow",
-            "Action": "sns:Publish",
-            "Resource": "*"
-}
-PRD_ACCOUNT_NO = "1234567890"
-ASSUME_ROLE_NAME = "STSDeployToPrdFromDevAccount"
-DEV_ACCOUNT_NO = "1234567899"
-REGION="ap-northeast-2"
-PROJECT_ID = "dev-java-ec2"
+# python codepipeline.py $REGION $PROJECT_ID $DEV_ACCOUNT_NO $PRD_ACCOUNT_NO $ASSUME_ROLE_NAME
+
+IAM_SNS_PUBLISH = { "Effect": "Allow", "Action": "sns:Publish", "Resource": "*" }
+
+## SET INPUT PARAMETERS
+REGION = str(sys.argv[1])
+PROJECT_ID = str(sys.argv[2])
+DEV_ACCOUNT_NO = str(sys.argv[3])
+PRD_ACCOUNT_NO = str(sys.argv[4])
+ASSUME_ROLE_NAME = str(sys.argv[5])
+
+
+print("ARGVS:", str(sys.argv))
 
 policy_arn = "arn:aws:iam::{}:policy/ApprovalAndDeployToPrd".format(DEV_ACCOUNT_NO)
-role_arn_deploy_to_product = "arn:aws:iam::1234567890:role/STSDeployToPrdFromDevAccount"
+role_arn_deploy_to_product = "arn:aws:iam::{}:role/{}".format(PRD_ACCOUNT_NO, ASSUME_ROLE_NAME)
+codepipeline_role_name = "CodeStarWorker-{}-CodePipeline".format(PROJECT_ID)
 
-projectId = "dev-java-ec2"
+def gen_assume_role_for_root(accountNo):
+    print("AssumeRole Aready added")
+
 
 def get_assume_role(accountNo, rolename):
-    arn = "arn:aws:iam::{}:role/{}".format(accountNo, rolename)
-    ASSUME_ROLE_CODEDEPLOY = {
+    assume_role_to_arn = {
         "Effect": "Allow",
         "Action": "sts:AssumeRole",
         "Resource": [
-        arn
+            "arn:aws:iam::{}:role/{}".format(accountNo, rolename)
         ]
     }
-codepipeline_role_name = "CodeStarWorker-{}-CodePipeline".format(projectId)
+    return assume_role_to_arn
 
-new_role = iam.get_role(RoleName=codepipeline_role_name)
 
-new_role["Role"]["AssumeRolePolicyDocument"]["Statement"].append(IAM_SNS_PUBLISH)
-new_role["Role"]["AssumeRolePolicyDocument"]["Statement"].append(get_assume_role(PRD_ACCOUNT_NO, ASSUME_ROLE_NAME))
-
-PolicyDocument = new_role["Role"]["AssumeRolePolicyDocument"]
-PolicyDocument["Version"]="2012-10-17"
-print(PolicyDocument)
-
-try:
-    iam.create_policy(PolicyName="ApprovalAndDeployToPrd", PolicyDocument=json.dumps(PolicyDocument))
-except:
-    print("Fail to create policy")
-
-def add_permission_on_s3(region, devAccountNo, projectId, prodAccountNo):
+def add_permission_on_s3(region, devAccountNo, PROJECT_ID, prodAccountNo):
     s3 = boto3.client("s3")
 
-    bucket_name = "aws-codestar-{}-{}-{}-pipe".format(region, devAccountNo, projectId)
+    bucket_name = "aws-codestar-{}-{}-{}-pipe".format(region, devAccountNo, PROJECT_ID)
     AWS_PRINCIPAL_ARN = "arn:aws:iam::{}:root".format(prodAccountNo)
     BUCKET_ARN = "arn:aws:s3:::{}".format(bucket_name)
     BUCKET_OBJECT_ARN = "arn:aws:s3:::{}/*".format(bucket_name)
@@ -91,11 +84,11 @@ def add_permission_on_s3(region, devAccountNo, projectId, prodAccountNo):
     s3.put_bucket_policy(Bucket=bucket_name, Policy=new_policy)
 
 
-def get_pipeline(projectId, role_arn_deploy_to_product):
-    pipeline_name = "{}-Pipeline".format(projectId)
-    application_name = "{}-app".format(projectId)
-    deployment_group_name = "{}-dg".format(projectId)
-    build_artifact_name = "{}-BuildArtifact".format(projectId)
+def get_pipeline(PROJECT_ID, role_arn_deploy_to_product):
+    pipeline_name = "{}-Pipeline".format(PROJECT_ID)
+    application_name = "{}-app".format(PROJECT_ID)
+    deployment_group_name = "{}-dg".format(PROJECT_ID)
+    build_artifact_name = "{}-BuildArtifact".format(PROJECT_ID)
     result = pl.get_pipeline(name=pipeline_name)
 
     pipeline = result['pipeline']
@@ -122,17 +115,53 @@ def get_pipeline(projectId, role_arn_deploy_to_product):
     stages.append(newDeployStage)
     return pipeline
 
-
-# TODO get publish policy
-try:
-    iam.get_policy(PolicyArn=policy_arn)
-except:
-    iam.create_policy(PolicyName="ApprovalAndDeployToPrd")
-
-iam.attach_role_policy(RoleName=codepipeline_role_name, PolicyArn=policy_arn)
+# TODO pipeline에 AssumeRole을 넣을 것 trust relationship
+## get_assume_role
+pipeline_role = iam.get_role(RoleName=codepipeline_role_name)
+print("CODEPIPELINE_ROLE:", pipeline_role)
+print("ASSUME_ROLE OF PIPELINE:", pipeline_role["Role"]["AssumeRolePolicyDocument"])
 
 
-new_pipeline = get_pipeline(projectId, role_arn_deploy_to_product)
+def add_assume_role_into_pipeline(pipeline_role, prd_account_no):
+    contains_prd_account_assumerole = False
+    for statement in pipeline_role["Role"]["AssumeRolePolicyDocument"]["Statement"]:
+        if (statement["Action"] == "sts:AssumeRole" and "AWS" in statement["Principal"]) and prd_account_no in statement["Principal"]["AWS"]:
+            # TODO add assumerole into pipeline assumerole_policy
+            contains_prd_account_assumerole = True
+            print("AssumeRole Aready added")
+
+            break
+
+    if False == contains_prd_account_assumerole:
+        assume_role_policy = pipeline_role["Role"]["AssumeRolePolicyDocument"]
+        assume_role_policy["Statement"].append(
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": "arn:aws:iam::" + prd_account_no + ":root"
+                },
+                "Action": "sts:AssumeRole"
+            }
+        )
+        iam.update_assume_role_policy(RoleName=codepipeline_role_name, PolicyDocument=json.dumps(assume_role_policy))
+
+
+def attach_approval_policy(policy_arn, prd_account_no, assume_role_name):
+    # TODO get publish policy
+    try:
+        exist_policy = iam.get_policy(PolicyArn=policy_arn)
+        print("EXIST_POLICY:", exist_policy)
+
+    except:
+        PolicyDocument = {"Version": "2012-10-17",
+                          "Statement": [IAM_SNS_PUBLISH, get_assume_role(prd_account_no, assume_role_name)]}
+        iam.create_policy(PolicyName="ApprovalAndDeployToPrd", PolicyDocument=json.dumps(PolicyDocument))
+
+    iam.attach_role_policy(RoleName=codepipeline_role_name, PolicyArn=policy_arn)
+
+
+attach_approval_policy(policy_arn, PRD_ACCOUNT_NO, ASSUME_ROLE_NAME)
+new_pipeline = get_pipeline(PROJECT_ID, role_arn_deploy_to_product)
 
 print(new_pipeline)
 
