@@ -1,4 +1,21 @@
 #!/bin/bash
+PRD_ACCOUNT_NO=174548683514
+ASSUME_ROLE_NAME=STSDeployToPrdFromDevAccount
+DEV_ACCOUNT_NO=125492839279
+REGION=ap-northeast-2
+PROJECT_ID=java-ec2-03
+PRODUCT_APP=chosun-deployclient-app
+PRODUCT_DEPLOYMENT_GROUP=chosun-deployclient-dg
+KMS_ARN="arn:aws:kms:ap-northeast-2:125492839279:key/6da53f71-17c4-46a3-9d5b-6a788dcd4a4e"
+APPROVAL_ARN="arn:aws:sns:ap-northeast-2:125492839279:APP1APPROVAL"
+
+#export AWS_PROFILE=default-chosun-map
+#python prd_sts_role.py $PROJECT_ID $DEV_ACCOUNT_NO
+
+#export AWS_PROFILE=default-ks4
+
+
+
 PRD_ACCOUNT_NO=123456789012
 ASSUME_ROLE_NAME=STSForDeployProduct
 DEV_ACCOUNT_NO=023456789012
@@ -7,12 +24,10 @@ PROJECT_ID=dev-java-ec2
 PRODUCT_APP=codedeploy-app
 PRODUCT_DEPLOYMENT_GROUP=codedeploy-dg
 DEV_INSTANCE_ROLE_ARN="arn:aws:iam::123456789012:role/CodeStarWorker-java-ec3-03-WebApp"
-PRD_INSTANCE_ROLE_ARN="arn:aws:iam::023456789012:role/chosun-deployclient-InstanceRole-SQNRDBTQK4X6"
+PRD_INSTANCE_ROLE_ARN="arn:aws:iam::023456789012:role/prd-deployment-InstanceRole-12345"
 APPROVAL_ARN="arn:aws:sns:ap-northeast-2:123456789012:APP1APPROVAL"
+PRD_PROFILE=prd-profile
+DEV_PROFILE=dev-profile
 
-export AWS_PROFILE=profile-prd
-python prd_sts_role.py $PROJECT_ID $DEV_ACCOUNT_NO
+python codepipeline.py $REGION $PROJECT_ID $DEV_ACCOUNT_NO $PRD_ACCOUNT_NO $ASSUME_ROLE_NAME $PRODUCT_APP $PRODUCT_DEPLOYMENT_GROUP $KMS_ARN $APPROVAL_ARN $DEV_PROFILE $PRD_PROFILE
 
-export AWS_PROFILE=profile-dev
-
-python codepipeline.py $REGION $PROJECT_ID $DEV_ACCOUNT_NO $PRD_ACCOUNT_NO $ASSUME_ROLE_NAME $PRODUCT_APP $PRODUCT_DEPLOYMENT_GROUP $KMS_ARN $DEV_INSTANCE_ROLE_ARN $PRD_INSTANCE_ROLE_ARN $APPROVAL_ARN
