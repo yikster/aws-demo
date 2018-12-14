@@ -4,7 +4,8 @@ import boto3
 import json
 import sys
 
-
+## TODO refactory for easyread
+## TODO remove duplicated paramters
 DEV_PROFILE = str(sys.argv[10])
 dev_session = boto3.Session(profile_name=DEV_PROFILE)
 PRD_PROFILE = str(sys.argv[11])
@@ -35,11 +36,13 @@ PRODUCT_DEPLOYMENT_GROUP = str(sys.argv[7])
 KMS_ARN = str(sys.argv[8])
 
 APPROVAL_SNS_ARN = str(sys.argv[9])
-print("ARGVS:", str(sys.argv))
+print("Step 1: check parameters ARGVS:", str(sys.argv))
 
-policy_arn = "arn:aws:iam::{}:policy/ApprovalAndDeployToPrd".format(DEV_ACCOUNT_NO)
+approval_policy_arn = "arn:aws:iam::" + DEV_ACCOUNT_NO + ":policy/ApprovalAndDeployToPrd-" + PROJECT_ID
 role_arn_deploy_to_product = "arn:aws:iam::{}:role/{}".format(PRD_ACCOUNT_NO, ASSUME_ROLE_NAME)
 codepipeline_role_name = "CodeStarWorker-{}-CodePipeline".format(PROJECT_ID)
+
+pipeline_role = None
 
 
 try:
@@ -51,9 +54,9 @@ except:
 
 codepipeline_role_arn = pipeline_role["Role"]["Arn"]
 
-print("CODEPIPELINE_ROLE:", pipeline_role)
-print("ASSUME_ROLE OF PIPELINE:", pipeline_role["Role"]["AssumeRolePolicyDocument"])
-print("DEV_CODEPIPELINE_ROLE_ARN:", pipeline_role["Role"]["Arn"])
+print("Step 2: get pipeline role/toolchain role:", pipeline_role)
+print("Step 2.1: ASSUME_ROLE OF PIPELINE:", pipeline_role["Role"]["AssumeRolePolicyDocument"])
+print("Step 2.2: DEV_CODEPIPELINE_ROLE_ARN:", pipeline_role["Role"]["Arn"])
 
 
 #res = kms.create_key()
@@ -89,13 +92,15 @@ def get_dev_instance_role_arn(project_id, dev_account_no):
 
 dev_deployment_role_arn, dev_instance_role_arn = get_dev_instance_role_arn(PROJECT_ID, DEV_ACCOUNT_NO)
 
+print ("Step 3: get dev account role arns: \n\t\t - deployment: {}\n\t\t - instance:{}".format(dev_deployment_role_arn, dev_instance_role_arn))
 def set_prd_env():
 
+    import datetime
     iam = prd_session.client('iam')
     codedeploy = prd_session.client("codedeploy")
     asg = prd_session.client("autoscaling")
 
-    PRD_STS_DEPLOY_ROLE_NAME = "PRD_DEPLOY_STS_{}".format(PROJECT_ID)
+    PRD_STS_DEPLOY_ROLE_NAME = ASSUME_ROLE_NAME
 
     ASSUME_ROLE_POLICY = {
         "Version": "2012-10-17",
@@ -103,10 +108,7 @@ def set_prd_env():
             {
                 "Effect": "Allow",
                 "Principal": {
-                    "AWS":
-                        "arn:aws:iam::{}:role/CodeStarWorker-{}-ToolChain".format(DEV_ACCOUNT_NO, PROJECT_ID)
-                    ,
-                    "Service": "codedeploy.amazonaws.com"
+                    "Service": ["codedeploy.amazonaws.com", "kms.amazonaws.com", "s3.amazonaws.com" ]
                 },
                 "Action": "sts:AssumeRole"
             },
@@ -120,7 +122,7 @@ def set_prd_env():
             {
                 "Effect": "Allow",
                 "Principal": {
-                    "AWS": "arn:aws:iam::{}:role/CodeStarWorker-{}-ToolChain".format(DEV_ACCOUNT_NO, PROJECT_ID)
+                    "AWS": ["arn:aws:iam::{}:role/CodeStarWorker-{}-ToolChain".format(DEV_ACCOUNT_NO, PROJECT_ID) ]
                 },
                 "Action": "sts:AssumeRole"
             }
@@ -141,6 +143,43 @@ def set_prd_env():
             PRODUCT_DEPLOYMENT_GROUP,
         ]
     )
+    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/AmazonS3FullAccess")
+    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/AWSCodeDeployFullAccess")
+    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole")
+
+    iam.put_role_policy(
+        RoleName=PRD_STS_DEPLOY_ROLE_NAME,
+        PolicyName="KMS_FULL_INLINE",
+        PolicyDocument= json.dumps({
+            "Version": "2012-10-17",
+            "Statement": [{ "Sid": "kmsfull", "Effect":"Allow", "Action":"kms:*", "Resource":"*"}]})
+    )
+    '''
+    iam.put_role_policy(
+        RoleName=PRD_STS_DEPLOY_ROLE_NAME,
+        PolicyName="RevokeOldSession-" + PROJECT_ID,
+        PolicyDocument=json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Deny",
+                        "Action": [
+                            "*"
+                        ],
+                        "Resource": [
+                            "*"
+                        ],
+                        "Condition": {
+                            "DateLessThan": {
+                                "aws:TokenIssueTime": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                            }
+                        }
+                    }
+                ]
+            })
+    )
+    '''
 
     prd_deployment_role_arn = res["deploymentGroupsInfo"][0]["serviceRoleArn"]
     print("PRD_DEPLOYMENT_GROUP_ARN:", prd_deployment_role_arn)
@@ -167,6 +206,8 @@ def set_prd_env():
 
     return prd_deployment_role_arn, prd_instance_role_arn
 
+print("Step 5: Set production roles")
+prd_deployment_role_arn, prd_instance_role_arn = set_prd_env()
 
 def gen_assume_role_for_root(accountNo):
     print("AssumeRole Aready added")
@@ -182,9 +223,6 @@ def get_assume_role(accountNo, rolename):
     }
     return assume_role_to_arn
 
-
-
-## TODO artifact s3에 prd_codedeploy_role 권한 추가 필
 def add_permission_on_s3(region, devAccountNo, PROJECT_ID, prodAccountNo, prd_deployment_role_arn, prd_instance_role_arn, dev_instance_role_arn):
     s3 = dev_session.client("s3")
 
@@ -207,7 +245,7 @@ def add_permission_on_s3(region, devAccountNo, PROJECT_ID, prodAccountNo, prd_de
         "Action": [
             "s3:*"
         ],
-        "Resource": [ BUCKET_OBJECT_ARN, BUCKET_OBJECT_ARN ]
+        "Resource": [ BUCKET_ARN, BUCKET_OBJECT_ARN ]
     }
 
     print("BUCKET_NAME:", bucket_name)
@@ -228,8 +266,10 @@ def add_permission_on_s3(region, devAccountNo, PROJECT_ID, prodAccountNo, prd_de
     new_policy = { "Version" : "2012-10-17", "Statement":[]}
     new_policy["Statement"] = curr_policy["Statement"]
 
+
+    print("POLICY_EXIST:", policy_exist)
     if False == policy_exist:
-        new_policy["Statement"].extend(policy_for_product)
+        new_policy["Statement"].append(policy_for_product)
 
     print("BUCKET_POLOCY:", json.dumps(new_policy))
     s3.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(new_policy))
@@ -305,13 +345,12 @@ def get_pipeline(PROJECT_ID, role_arn_deploy_to_product, application_name, deplo
     pipeline['stages'] = stages
     return pipeline
 
-# TODO pipeline에 AssumeRole을 넣을 것 trust relationship
+# TODO add assume role to pipeline, trust relationship
 ## get_assume_role
-pipeline_role = None
 
 
 
-def add_assume_role_into_pipeline(pipeline_role, prd_account_no):
+def add_assume_role_to_pipeline(pipeline_role, prd_account_no):
     contains_prd_account_assumerole = False
     for statement in pipeline_role["Role"]["AssumeRolePolicyDocument"]["Statement"]:
         if (statement["Action"] == "sts:AssumeRole" and "AWS" in statement["Principal"]) and prd_account_no in statement["Principal"]["AWS"]:
@@ -327,38 +366,58 @@ def add_assume_role_into_pipeline(pipeline_role, prd_account_no):
             {
                 "Effect": "Allow",
                 "Principal": {
-                    "AWS": "arn:aws:iam::" + prd_account_no + ":root"
+                    "AWS": [ "arn:aws:iam::" + prd_account_no + ":root",role_arn_deploy_to_product ]
                 },
                 "Action": "sts:AssumeRole"
             }
         )
+        print("\t\t", json.dumps(assume_role_policy))
         iam.update_assume_role_policy(RoleName=codepipeline_role_name, PolicyDocument=json.dumps(assume_role_policy))
 
 
-def attach_approval_policy(policy_arn, prd_account_no, assume_role_name):
+print("Step 4: add assume_role to pipeline")
+add_assume_role_to_pipeline(pipeline_role, PRD_ACCOUNT_NO)
+
+pipeline_role = None
+
+def attach_approval_policy(approval_policy_arn, prd_account_no, assume_role_name):
     # TODO get publish policy
     try:
-        exist_policy = iam.get_policy(PolicyArn=policy_arn)
+        exist_policy = iam.get_policy(PolicyArn=approval_policy_arn)
         print("EXIST_POLICY:", exist_policy)
 
     except:
-        PolicyDocument = {"Version": "2012-10-17",
-                          "Statement": [IAM_SNS_PUBLISH, get_assume_role(prd_account_no, assume_role_name)]}
-        iam.create_policy(PolicyName="ApprovalAndDeployToPrd", PolicyDocument=json.dumps(PolicyDocument))
+        PolicyDocument = {
+            "Version": "2012-10-17",
+            "Statement": [
+                IAM_SNS_PUBLISH,
+                {
+                    "Sid":"DeployAssumeRole",
+                    "Effect":"Allow",
+                    "Resource": [ "arn:aws:iam::" + PRD_ACCOUNT_NO + ":role/" + ASSUME_ROLE_NAME , prd_deployment_role_arn ],
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        }
+        print("Policy-ApprovalAdnDeployToPrd:", PolicyDocument)
+        iam.create_policy(PolicyName="ApprovalAndDeployToPrd-" + PROJECT_ID, PolicyDocument=json.dumps(PolicyDocument))
         print("CREATE_POLICY")
 
     print("CODEPIPELINE_ROLE:", codepipeline_role_name)
-    print("CODEPIPELINE_ROLE_POLICY:", policy_arn)
+    print("CODEPIPELINE_ROLE_POLICY:", approval_policy_arn)
 
-    res = iam.attach_role_policy(RoleName=codepipeline_role_name, PolicyArn=policy_arn)
+    res = iam.attach_role_policy(RoleName=codepipeline_role_name, PolicyArn=approval_policy_arn)
     print("ATTACH_POLICY:", res)
 
 
 
-prd_deployment_role_arn, prd_instance_role_arn = set_prd_env()
 
-attach_approval_policy(policy_arn, PRD_ACCOUNT_NO, ASSUME_ROLE_NAME)
+print("Step 6: add approval policy to prd")
+attach_approval_policy(approval_policy_arn, PRD_ACCOUNT_NO, ASSUME_ROLE_NAME)
 
+print("Step 7: Add Approval and DeployPrd to Codestar project pipeline")
+
+print("Step 7.1: get current pipeline")
 new_pipeline = get_pipeline(PROJECT_ID, role_arn_deploy_to_product, PRODUCT_APP, PRODUCT_DEPLOYMENT_GROUP)
 artifactStore = new_pipeline["artifactStore"]
 artifactStore["encryptionKey"] = { "id" : KMS_ARN, "type":"KMS" }
@@ -370,6 +429,8 @@ dev_instance_role = ""
 
 print("PRD_INS_ROLE_ARN:", prd_instance_role_arn)
 print("DEV_INS_ROLE_ARN:", dev_instance_role_arn)
+
+print("Step 8: add DEV kms policy for prd role's access")
 ## IAM_instance_profile_DEV
 for stage in new_pipeline["stages"]:
     if "Deploy" == stage["name"] and 3 == len(stage["actions"]):
@@ -395,7 +456,28 @@ for stage in new_pipeline["stages"]:
                             state["Principal"]["AWS"].extend([dev_instance_role_arn, prd_instance_role_arn])
                             state["Principal"]["AWS"] = list(set(state["Principal"]["AWS"]))
                             statements[i] = state
+                            pliicy_added = True
+
                 policy["Statement"] = statements
+
+                if False == policy_added:
+                    policy["Statement"].append({
+                        "Sid": KMS_POLICY_SID,
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": [dev_instance_role_arn, prd_instance_role_arn, dev_deployment_role_arn, prd_deployment_role_arn]
+                        },
+                        "Action": [
+                            "kms:Encrypt",
+                            "kms:Decrypt",
+                            "kms:ReEncrypt*",
+                            "kms:GenerateDataKey*",
+                            "kms:DescribeKey"
+                        ],
+                        "Resource": "*"
+                    })
+
+
 
                 print("KMS_POLOCY_DOCUMENT:", json.dumps(policy))
                 kms.put_key_policy(
@@ -407,6 +489,8 @@ for stage in new_pipeline["stages"]:
 
 
 
+
+print("Step 9: add kms encryption key into build stage")
 
 ## codebuild
 current_codebuild = codebuild.batch_get_projects(names=[PROJECT_ID])
@@ -420,11 +504,44 @@ new_pipeline["artifactStore"] = artifactStore
 
 print(new_pipeline)
 
+print("Step 10: add permissions for access dev artifact to prd_roles and dev_roles")
 add_permission_on_s3(REGION, DEV_ACCOUNT_NO, PROJECT_ID, PRD_ACCOUNT_NO, prd_deployment_role_arn, prd_instance_role_arn, dev_instance_role_arn)
 
-pl.update_pipeline(pipeline=new_pipeline)
+## TODO revoke role
+# Should  revoke dev-pipeline/toolchain role
+
+## GET NEW SESSION (role is updated)
+
+import time
+
+t=60
+while t > 0:
+    print( str(t) + " seconds left..")
+    time.sleep(1)
+    t-=1
+
+print("Step 11: update pipeline")
+
+updated_dev_session = boto3.Session(profile_name=DEV_PROFILE)
+codepipeline = updated_dev_session.client("codepipeline")
+codepipeline.update_pipeline(pipeline=new_pipeline)
 ## ERRROR
 ## botocore.errorfactory.InvalidStructureException: An error occurred (InvalidStructureException) when calling the UpdatePipeline operation: arn:aws:iam::125492839279:role/CodeStarWorker-java-ec2-02-ToolChain is not authorized to perform AssumeRole on role arn:aws:iam::174548683514:role/STSDeployToPrdFromDevAccount
+#Fix 1 attach codedeploy_permission & assumerole
+#Fix 2 attach ToolChain assumerole is added PRD_STS_ROLE
+## Maybe it takes time ( it works , two hours later , there was error at that time)
+
+## TODO python add permission to s3
+#Fix 3 : Unable to access the artifact with Amazon S3 object key 'key' located in the Amazon S3 artifact bucket 'bucket'. The provided role does not have sufficient permissions.
+## doenst workadd "arn:aws:iam::125492839279:role/CodeStarWorker-php-ec2-01-ToolChain", to production_deployment_role
+
+## TODO python add permission to STS--PHP S3 Full, KMS Full
+#Fix 4 : Add permissions to STSDeployToPrdFromDevAccountPHP, S3 Full, KMS Full
+#Fix 5 revoke ToolChain (dev) STS(prd) session
+
+#Fix Final : remove bode permission on dev_account's ToolChain permission
+
+
 print("# of stages", len(new_pipeline['stages']))
 
 #print(json.dumps(result, default=json_util.default))
