@@ -29,7 +29,7 @@ KMS_POLICY_SID = "Added by pipelineautomation"
 
 ## SET INPUT PARAMETERS
 REGION = str(sys.argv[1])
-PROJECT_ID = str(sys.argv[2])
+PROJECT_ID = str(sys.argv[2])[:15]
 DEV_ACCOUNT_NO = str(sys.argv[3])
 PRD_ACCOUNT_NO = str(sys.argv[4])
 PRODUCT_APP = str(sys.argv[5])
@@ -224,32 +224,7 @@ def set_prd_env():
             "Version": "2012-10-17",
             "Statement": [{ "Sid": "kmsfull", "Effect":"Allow", "Action":"kms:*", "Resource":"*"}]})
     )
-    '''
-    iam.put_role_policy(
-        RoleName=PRD_STS_DEPLOY_ROLE_NAME,
-        PolicyName="RevokeOldSession-" + PROJECT_ID,
-        PolicyDocument=json.dumps(
-            {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Effect": "Deny",
-                        "Action": [
-                            "*"
-                        ],
-                        "Resource": [
-                            "*"
-                        ],
-                        "Condition": {
-                            "DateLessThan": {
-                                "aws:TokenIssueTime": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                            }
-                        }
-                    }
-                ]
-            })
-    )
-    '''
+
 
     prd_deployment_role_arn = res["deploymentGroupsInfo"][0]["serviceRoleArn"]
     print("PRD_DEPLOYMENT_GROUP_ARN:", prd_deployment_role_arn)
@@ -466,6 +441,33 @@ def add_assume_role_to_pipeline(pipeline_role, prd_account_no):
 
     print("\t\t", json.dumps(assume_role_policy))
     iam.update_assume_role_policy(RoleName=codepipeline_role_name, PolicyDocument=json.dumps(assume_role_policy))
+    import datetime
+    iam.put_role_policy(
+        RoleName=codepipeline_role_name,
+        PolicyName="RevokeOldSession-" + PROJECT_ID,
+        PolicyDocument=json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Deny",
+                        "Action": [
+                            "*"
+                        ],
+                        "Resource": [
+                            "*"
+                        ],
+                        "Condition": {
+                            "DateLessThan": {
+                                "aws:TokenIssueTime": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                            }
+                        }
+                    }
+                ]
+            })
+    )
+
+
 
 
 print("Step 4: add assume_role to pipeline")
@@ -523,42 +525,6 @@ print("PRD_INS_ROLE_ARN:", prd_instance_role_arn)
 print("DEV_INS_ROLE_ARN:", dev_instance_role_arn)
 
 print("Step 8: add DEV kms policy for prd role's access")
-## IAM_instance_profile_DEV
-'''
-for stage in new_pipeline["stages"]:
-    if "Deploy" == stage["name"] and 3 == len(stage["actions"]):
-        for action in stage["actions"]:
-            if action["configuration"] != "" and "ParameterOverrides" in action["configuration"]:
-                INSTANCE_PROFILE_NAME = json.loads(action["configuration"]["ParameterOverrides"])["WebAppInstanceProfile"]
-                res = iam.get_instance_profile(InstanceProfileName=INSTANCE_PROFILE_NAME)
-
-                dev_instance_role = res["InstanceProfile"]["Roles"][0]["Arn"]
-
-                print("DEV_INSTANCE_ROLE:", dev_instance_role)
-                res = kms.get_key_policy(KeyId=kms_arn, PolicyName="default")
-                policy = json.loads(res["Policy"])
-                statements = policy["Statement"]
-                policy_added = False
-                for i in range(len(statements)):
-                    state = statements[i]
-                    if state["Sid"] == KMS_POLICY_SID and "Principal" in state and "AWS" in state["Principal"] and type(state["Principal"]["AWS"]) is list:
-                        if dev_instance_role_arn in state["Principal"]["AWS"] and prd_instance_role_arn in state["Principal"]["AWS"] :
-                            policy_added = True
-
-                        else:
-                            state["Principal"]["AWS"].extend([dev_instance_role_arn, prd_instance_role_arn])
-                            state["Principal"]["AWS"] = list(set(state["Principal"]["AWS"]))
-                            statements[i] = state
-                            pliicy_added = True
-
-                policy["Statement"] = statements
-
-                if False == policy_added:
-
-
-
-
-'''
 
 
 print("Step 9: add kms encryption key into build stage")
@@ -590,6 +556,7 @@ print("Step 11: update pipeline")
 
 updated_dev_session = boto3.Session(profile_name=DEV_PROFILE)
 codepipeline = updated_dev_session.client("codepipeline")
+## TODO ToolChain role revoke
 codepipeline.update_pipeline(pipeline=new_pipeline)
 ## ERRROR
 ## botocore.errorfactory.InvalidStructureException: An error occurred (InvalidStructureException) when calling the UpdatePipeline operation: arn:aws:iam::125492839279:role/CodeStarWorker-java-ec2-02-ToolChain is not authorized to perform AssumeRole on role arn:aws:iam::174548683514:role/STSDeployToPrdFromDevAccount
