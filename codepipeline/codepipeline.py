@@ -6,9 +6,9 @@ import sys
 
 ## TODO refactory for easyread
 ## TODO remove duplicated paramters
-DEV_PROFILE = str(sys.argv[9])
+DEV_PROFILE = str(sys.argv[8])
 dev_session = boto3.Session(profile_name=DEV_PROFILE)
-PRD_PROFILE = str(sys.argv[10])
+PRD_PROFILE = str(sys.argv[9])
 prd_session = boto3.Session(profile_name=PRD_PROFILE)
 
 pl = dev_session.client('codepipeline')
@@ -36,9 +36,7 @@ PRODUCT_APP = str(sys.argv[5])
 PRODUCT_DEPLOYMENT_GROUP = str(sys.argv[6])
 ASSUME_ROLE_NAME = "PRD_AssumeRole_for_DEV_" + PROJECT_ID
 
-KMS_ARN = str(sys.argv[7])
-
-APPROVAL_SNS_ARN = str(sys.argv[8])
+APPROVAL_SNS_ARN = str(sys.argv[7])
 
 PRD_ASSUME_ROLE_SID = "PRDASSUMEROLE" + PROJECT_ID.replace("-", "").replace("_","")
 print("Step 1: check parameters ARGVS:", str(sys.argv))
