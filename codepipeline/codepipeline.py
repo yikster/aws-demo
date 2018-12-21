@@ -207,24 +207,36 @@ def set_prd_env():
                               AssumeRolePolicyDocument=json.dumps(ASSUME_ROLE_POLICY))
         print("PRD_STS_DEPLOY_ROLE is created", res)
 
+    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/AmazonS3FullAccess")
+    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/AWSCodeDeployFullAccess")
+    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole")
+
+    # Create a policy
+    prd_kms_policy_arn = "arn:aws:iam::" + PRD_ACCOUNT_NO + ":policy/KMS_" + PRD_STS_DEPLOY_ROLE_NAME
+    try:
+
+        res = iam.get_policy(PolicyArn=prd_kms_policy_arn)
+        print("GET RES:", res)
+    except:
+        res = iam.create_policy(PolicyName="KMS_" + PRD_STS_DEPLOY_ROLE_NAME, PolicyDocument=json.dumps({ "Version": "2012-10-17", "Statement": [{"Sid": "kmsfull", "Effect": "Allow", "Action": "kms:*", "Resource": "*"}]})
+        )
+        print(res)
+        iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn=prd_kms_policy_arn)
+
+    '''
+    iam.put_role_policy(
+        RoleName=PRD_STS_DEPLOY_ROLE_NAME,
+        PolicyName="KMS_FULL_INLINE",
+        PolicyDocument= json.dumps(
+    )
+    '''
+
     res = codedeploy.batch_get_deployment_groups(
         applicationName=PRODUCT_APP,
         deploymentGroupNames=[
             PRODUCT_DEPLOYMENT_GROUP,
         ]
     )
-    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/AmazonS3FullAccess")
-    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/AWSCodeDeployFullAccess")
-    iam.attach_role_policy(RoleName=PRD_STS_DEPLOY_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole")
-
-    iam.put_role_policy(
-        RoleName=PRD_STS_DEPLOY_ROLE_NAME,
-        PolicyName="KMS_FULL_INLINE",
-        PolicyDocument= json.dumps({
-            "Version": "2012-10-17",
-            "Statement": [{ "Sid": "kmsfull", "Effect":"Allow", "Action":"kms:*", "Resource":"*"}]})
-    )
-
 
     prd_deployment_role_arn = res["deploymentGroupsInfo"][0]["serviceRoleArn"]
     print("PRD_DEPLOYMENT_GROUP_ARN:", prd_deployment_role_arn)
@@ -438,7 +450,8 @@ def add_assume_role_to_pipeline(pipeline_role, prd_account_no):
 
 
     assume_role_policy["Statement"].append(new_assume_role_satement)
-
+    # TODO cannot remove permission role
+    ## response = iam.delete_role_permissions_boundary(RoleName=codepipeline_role_name)
     print("\t\t", json.dumps(assume_role_policy))
     iam.update_assume_role_policy(RoleName=codepipeline_role_name, PolicyDocument=json.dumps(assume_role_policy))
     import datetime
