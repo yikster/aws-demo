@@ -6,9 +6,9 @@ import sys
 
 ## TODO refactory for easyread
 ## TODO remove duplicated paramters
-DEV_PROFILE = str(sys.argv[10])
+DEV_PROFILE = str(sys.argv[9])
 dev_session = boto3.Session(profile_name=DEV_PROFILE)
-PRD_PROFILE = str(sys.argv[11])
+PRD_PROFILE = str(sys.argv[10])
 prd_session = boto3.Session(profile_name=PRD_PROFILE)
 
 pl = dev_session.client('codepipeline')
@@ -22,6 +22,8 @@ cf = dev_session.client('cloudformation')
 IAM_SNS_PUBLISH = { "Effect": "Allow", "Action": "sns:Publish", "Resource": "*" }
 KMS_POLICY_SID = "Added by pipelineautomation"
 
+# TODO make kms only for this pipeline
+
 ## PRD Account must have s3 get api call permission
 ## KMS - https://aws.amazon.com/ko/blogs/security/share-custom-encryption-keys-more-securely-between-accounts-by-using-aws-key-management-service/
 
@@ -30,12 +32,15 @@ REGION = str(sys.argv[1])
 PROJECT_ID = str(sys.argv[2])
 DEV_ACCOUNT_NO = str(sys.argv[3])
 PRD_ACCOUNT_NO = str(sys.argv[4])
-ASSUME_ROLE_NAME = str(sys.argv[5])
-PRODUCT_APP = str(sys.argv[6])
-PRODUCT_DEPLOYMENT_GROUP = str(sys.argv[7])
-KMS_ARN = str(sys.argv[8])
+PRODUCT_APP = str(sys.argv[5])
+PRODUCT_DEPLOYMENT_GROUP = str(sys.argv[6])
+ASSUME_ROLE_NAME = "PRD_AssumeRole_for_DEV_" + PROJECT_ID
 
-APPROVAL_SNS_ARN = str(sys.argv[9])
+KMS_ARN = str(sys.argv[7])
+
+APPROVAL_SNS_ARN = str(sys.argv[8])
+
+PRD_ASSUME_ROLE_SID = "PRDASSUMEROLE" + PROJECT_ID.replace("-", "").replace("_","")
 print("Step 1: check parameters ARGVS:", str(sys.argv))
 
 approval_policy_arn = "arn:aws:iam::" + DEV_ACCOUNT_NO + ":policy/ApprovalAndDeployToPrd-" + PROJECT_ID
@@ -44,6 +49,75 @@ codepipeline_role_name = "CodeStarWorker-{}-CodePipeline".format(PROJECT_ID)
 
 pipeline_role = None
 
+## CREATE KMS
+
+def create_kms(project_id, dev_instance_role_arn, dev_deployment_role_arn, prd_instance_role_arn, prd_deployment_role_arn):
+
+
+    kms_arn = ""
+    key_id = ""
+
+    try:
+        response = kms.describe_key(KeyId="alias/" + project_id)
+
+        kms_arn = response["KeyMetadata"]["Arn"]
+        key_id = response["KeyMetadata"]["KeyId"]
+
+    except:
+
+
+        response = kms.create_key(
+            Description='KMS_KEY_FOR ' + project_id,
+            KeyUsage='ENCRYPT_DECRYPT',
+            Origin='AWS_KMS',
+            Tags=[
+                {
+                    'TagKey': 'Name',
+                    'TagValue': 'KMS_KEY' + project_id
+                },
+            ]
+        )
+
+        kms_arn = response["KeyMetadata"]["Arn"]
+        key_id = response["KeyMetadata"]["KeyId"]
+        response = kms.create_alias(
+            AliasName= "alias/" + project_id ,
+            TargetKeyId=key_id
+        )
+
+    res = kms.get_key_policy(KeyId=kms_arn, PolicyName="default")
+    policy = json.loads(res["Policy"])
+    for i in range(len(policy["Statement"])):
+        statement = policy["Statement"][i]
+        if statement["Sid"] == KMS_POLICY_SID:
+            del policy["Statement"][i]
+
+    policy["Statement"].append({
+        "Sid": KMS_POLICY_SID,
+        "Effect": "Allow",
+        "Principal": {
+            "AWS": [dev_instance_role_arn, prd_instance_role_arn, dev_deployment_role_arn, prd_deployment_role_arn]
+        },
+        "Action": [
+            "kms:Encrypt",
+            "kms:Decrypt",
+            "kms:ReEncrypt*",
+            "kms:GenerateDataKey*",
+            "kms:DescribeKey"
+        ],
+        "Resource": "*"
+    })
+
+
+
+    print("KMS_POLOCY_DOCUMENT:", json.dumps(policy))
+    kms.put_key_policy(
+        KeyId=key_id,
+        PolicyName='default',
+        Policy=json.dumps(policy)
+    )
+
+    return kms_arn, key_id
 
 try:
     pipeline_role = iam.get_role(RoleName=codepipeline_role_name)
@@ -59,8 +133,6 @@ print("Step 2.1: ASSUME_ROLE OF PIPELINE:", pipeline_role["Role"]["AssumeRolePol
 print("Step 2.2: DEV_CODEPIPELINE_ROLE_ARN:", pipeline_role["Role"]["Arn"])
 
 
-#res = kms.create_key()
-#print(res)
 def get_dev_instance_role_arn(project_id, dev_account_no):
     codedeploy = dev_session.client("codedeploy")
     res = codedeploy.batch_get_deployment_groups(
@@ -209,6 +281,10 @@ def set_prd_env():
 print("Step 5: Set production roles")
 prd_deployment_role_arn, prd_instance_role_arn = set_prd_env()
 
+
+print("Step 5.5: create DEV KMS ")
+kms_arn, key_id = create_kms(PROJECT_ID, dev_instance_role_arn, dev_deployment_role_arn, prd_instance_role_arn, prd_deployment_role_arn)
+
 def gen_assume_role_for_root(accountNo):
     print("AssumeRole Aready added")
 
@@ -352,27 +428,46 @@ def get_pipeline(PROJECT_ID, role_arn_deploy_to_product, application_name, deplo
 
 def add_assume_role_to_pipeline(pipeline_role, prd_account_no):
     contains_prd_account_assumerole = False
-    for statement in pipeline_role["Role"]["AssumeRolePolicyDocument"]["Statement"]:
-        if (statement["Action"] == "sts:AssumeRole" and "AWS" in statement["Principal"]) and prd_account_no in statement["Principal"]["AWS"]:
-            # TODO add assumerole into pipeline assumerole_policy
-            contains_prd_account_assumerole = True
-            print("AssumeRole Aready added")
+    new_assume_role_satement = {}
+    assume_role_policy = pipeline_role["Role"]["AssumeRolePolicyDocument"]
 
-            break
+    for i in range(len(assume_role_policy["Statement"])):
+        statement = assume_role_policy["Statement"][i]
+        if "Sid" in statement.keys():
+            if statement["Sid"] == PRD_ASSUME_ROLE_SID:
+                new_assume_role_satement = statement
+                del assume_role_policy["Statement"][i]
+                contains_prd_account_assumerole = True
+                break
 
-    if False == contains_prd_account_assumerole:
-        assume_role_policy = pipeline_role["Role"]["AssumeRolePolicyDocument"]
-        assume_role_policy["Statement"].append(
-            {
+    ## if assume role sid is not exist, create new one
+    if 0 == len(new_assume_role_satement):
+        new_assume_role_satement = {
+                "Sid" : PRD_ASSUME_ROLE_SID,
                 "Effect": "Allow",
                 "Principal": {
-                    "AWS": [ "arn:aws:iam::" + prd_account_no + ":root",role_arn_deploy_to_product ]
+                    "AWS": ["arn:aws:iam::" + prd_account_no + ":root",role_arn_deploy_to_product]
                 },
                 "Action": "sts:AssumeRole"
             }
-        )
-        print("\t\t", json.dumps(assume_role_policy))
-        iam.update_assume_role_policy(RoleName=codepipeline_role_name, PolicyDocument=json.dumps(assume_role_policy))
+
+    ## if assume role is exist but there are not prd account in principal, add prd arn
+    if new_assume_role_satement["Action"] == "sts:AssumeRole" \
+        and "AWS" in new_assume_role_satement["Principal"] \
+        and prd_account_no not in new_assume_role_satement["Principal"]["AWS"]:
+
+            if type(new_assume_role_satement["Principal"]["AWS"]) is list:
+                new_assume_role_satement["Principal"]["AWS"].extend(["arn:aws:iam::" + prd_account_no + ":root",role_arn_deploy_to_product])
+            else:
+                new_arns = [new_assume_role_satement["Principal"]["AWS"] , "arn:aws:iam::" + prd_account_no + ":root",role_arn_deploy_to_product]
+                new_assume_role_satement["Principal"]["AWS"] = new_arns
+
+
+
+    assume_role_policy["Statement"].append(new_assume_role_satement)
+
+    print("\t\t", json.dumps(assume_role_policy))
+    iam.update_assume_role_policy(RoleName=codepipeline_role_name, PolicyDocument=json.dumps(assume_role_policy))
 
 
 print("Step 4: add assume_role to pipeline")
@@ -420,9 +515,8 @@ print("Step 7: Add Approval and DeployPrd to Codestar project pipeline")
 print("Step 7.1: get current pipeline")
 new_pipeline = get_pipeline(PROJECT_ID, role_arn_deploy_to_product, PRODUCT_APP, PRODUCT_DEPLOYMENT_GROUP)
 artifactStore = new_pipeline["artifactStore"]
-artifactStore["encryptionKey"] = { "id" : KMS_ARN, "type":"KMS" }
+artifactStore["encryptionKey"] = { "id" : kms_arn, "type":"KMS" }
 
-## Key 를 넣으면 에러가..
 #artifactStore.pop("encryptionKey", None)
 
 dev_instance_role = ""
@@ -432,6 +526,7 @@ print("DEV_INS_ROLE_ARN:", dev_instance_role_arn)
 
 print("Step 8: add DEV kms policy for prd role's access")
 ## IAM_instance_profile_DEV
+'''
 for stage in new_pipeline["stages"]:
     if "Deploy" == stage["name"] and 3 == len(stage["actions"]):
         for action in stage["actions"]:
@@ -442,7 +537,7 @@ for stage in new_pipeline["stages"]:
                 dev_instance_role = res["InstanceProfile"]["Roles"][0]["Arn"]
 
                 print("DEV_INSTANCE_ROLE:", dev_instance_role)
-                res = kms.get_key_policy(KeyId=KMS_ARN, PolicyName="default")
+                res = kms.get_key_policy(KeyId=kms_arn, PolicyName="default")
                 policy = json.loads(res["Policy"])
                 statements = policy["Statement"]
                 policy_added = False
@@ -461,42 +556,20 @@ for stage in new_pipeline["stages"]:
                 policy["Statement"] = statements
 
                 if False == policy_added:
-                    policy["Statement"].append({
-                        "Sid": KMS_POLICY_SID,
-                        "Effect": "Allow",
-                        "Principal": {
-                            "AWS": [dev_instance_role_arn, prd_instance_role_arn, dev_deployment_role_arn, prd_deployment_role_arn]
-                        },
-                        "Action": [
-                            "kms:Encrypt",
-                            "kms:Decrypt",
-                            "kms:ReEncrypt*",
-                            "kms:GenerateDataKey*",
-                            "kms:DescribeKey"
-                        ],
-                        "Resource": "*"
-                    })
 
 
 
-                print("KMS_POLOCY_DOCUMENT:", json.dumps(policy))
-                kms.put_key_policy(
-                    KeyId=KMS_ARN,
-                    PolicyName='default',
-                    Policy=json.dumps(policy)
-                )
 
-
-
+'''
 
 
 print("Step 9: add kms encryption key into build stage")
 
 ## codebuild
 current_codebuild = codebuild.batch_get_projects(names=[PROJECT_ID])
-current_codebuild["projects"][0]["encryptionKey"] = KMS_ARN
+current_codebuild["projects"][0]["encryptionKey"] = key_id
 
-res = codebuild.update_project(name=PROJECT_ID, encryptionKey=KMS_ARN)
+res = codebuild.update_project(name=PROJECT_ID, encryptionKey=key_id)
 print("CODEBUILD_UPDATE_PROJECT_RESULT:", res)
 
 ## Add KMS
@@ -514,11 +587,6 @@ add_permission_on_s3(REGION, DEV_ACCOUNT_NO, PROJECT_ID, PRD_ACCOUNT_NO, prd_dep
 
 import time
 
-t=60
-while t > 0:
-    print( str(t) + " seconds left..")
-    time.sleep(1)
-    t-=1
 
 print("Step 11: update pipeline")
 
