@@ -6,9 +6,26 @@ import sys
 
 ## TODO refactory for easyread
 ## TODO remove duplicated paramters
+
+## Set Parameters
+REGION = str(sys.argv[1])
+PROJECT_ID = str(sys.argv[2])[:15]
+DEV_ACCOUNT_NO = str(sys.argv[3])
+PRD_ACCOUNT_NO = str(sys.argv[4])
+PRODUCT_APP = str(sys.argv[5])
+PRODUCT_DEPLOYMENT_GROUP = str(sys.argv[6])
+APPROVAL_SNS_ARN = str(sys.argv[7])
+
+ASSUME_ROLE_NAME = "PRD_AssumeRole_for_DEV_" + PROJECT_ID
+
 DEV_PROFILE = str(sys.argv[8])
-dev_session = boto3.Session(profile_name=DEV_PROFILE)
 PRD_PROFILE = str(sys.argv[9])
+
+
+
+
+## Set sessions and api clients
+dev_session = boto3.Session(profile_name=DEV_PROFILE)
 prd_session = boto3.Session(profile_name=PRD_PROFILE)
 
 pl = dev_session.client('codepipeline')
@@ -17,7 +34,6 @@ iam = dev_session.client('iam')
 kms = dev_session.client('kms')
 cf = dev_session.client('cloudformation')
 
-# python codepipeline.py $REGION $PROJECT_ID $DEV_ACCOUNT_NO $PRD_ACCOUNT_NO $ASSUME_ROLE_NAME
 
 IAM_SNS_PUBLISH = { "Effect": "Allow", "Action": "sns:Publish", "Resource": "*" }
 KMS_POLICY_SID = "Added by pipelineautomation"
@@ -28,15 +44,7 @@ KMS_POLICY_SID = "Added by pipelineautomation"
 ## KMS - https://aws.amazon.com/ko/blogs/security/share-custom-encryption-keys-more-securely-between-accounts-by-using-aws-key-management-service/
 
 ## SET INPUT PARAMETERS
-REGION = str(sys.argv[1])
-PROJECT_ID = str(sys.argv[2])[:15]
-DEV_ACCOUNT_NO = str(sys.argv[3])
-PRD_ACCOUNT_NO = str(sys.argv[4])
-PRODUCT_APP = str(sys.argv[5])
-PRODUCT_DEPLOYMENT_GROUP = str(sys.argv[6])
-ASSUME_ROLE_NAME = "PRD_AssumeRole_for_DEV_" + PROJECT_ID
 
-APPROVAL_SNS_ARN = str(sys.argv[7])
 
 PRD_ASSUME_ROLE_SID = "PRDASSUMEROLE" + PROJECT_ID.replace("-", "").replace("_","")
 print("Step 1: check parameters ARGVS:", str(sys.argv))
