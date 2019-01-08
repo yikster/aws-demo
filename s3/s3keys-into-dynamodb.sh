@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PROFILE=$1
+BUCKET=$2
+REGION=$3
+DYNAMODB_TABLE=$4
+
+python3 s3keys-into-dynamodb.py PROFILE BUCKET REGION DYNAMODB_TABLE
