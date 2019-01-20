@@ -6,6 +6,7 @@ execution:
 
 scenarios:
   quick-test:
+    retrieve-resources: false
     requests:
     - http://blazedemo.com
 
