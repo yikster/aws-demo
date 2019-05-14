@@ -2,7 +2,7 @@ Parameters:
   PCheckInterval: 
     Description: Nat EC2 HealthCheck interval seconds
     MinValue: 5
-    MaxValue: 120
+    MaxValue: 30
     Type: Number
   PAZ1NatInstanceId:
     Description: Available Zone1 NAT Instance Id
@@ -17,6 +17,41 @@ Parameters:
     Description: Available Zone2 Private RouteTable Id
     Type: String
 Resources:
+  NatHealthCheckRole: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "lambda.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies: 
+        - 
+          PolicyName: "root"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "xray:PutTraceSegments"
+                  - "lambda:InvokeFunction"
+                  - "ec2:DescribeInstanceStatus"
+                Resource: "*"
+              - 
+                Effect: "Allow"
+                Action: "ec2:ReplaceRoute"
+                Resource: !Join [":", ["arn:aws:ec2", !Ref "AWS::Region" , !Ref "AWS::AccountId", "route-table/*" ] ]
+       
   HealthCheckAndUpdateRoute: 
     Type: "AWS::Lambda::Function"
     Properties: 
@@ -25,7 +60,7 @@ Resources:
       TracingConfig:
         Mode: "Active"
       Handler: "index.handler"
-      Role: "arn:aws:iam::125492839279:role/CodeStar-natinstanceheal-Execution"
+      Role: !GetAtt NatHealthCheckRole.Arn
       Environment:
         Variables:
           CHECK_INTERVAL: !Ref PCheckInterval
@@ -68,6 +103,8 @@ Resources:
               response = client.describe_instance_status(InstanceIds=[AZ1_NAT_EC2, AZ2_NAT_EC2])
               az1_status_ok = False
               az2_status_ok = False
+
+              rt_response = client.describe_route_tables(RouteTableIds=[AZ1_RT, AZ2_RT])
               
               logger.info("ec2status:", response)
               for item in response["InstanceStatuses"]:
@@ -155,10 +192,7 @@ Resources:
       State: "ENABLED"
       Targets: 
         - 
-          Arn: 
-            Fn::GetAtt: 
-              - "InvokeSecondsPerMin"
-              - "Arn"
+          Arn: !GetAtt InvokeSecondsPerMin.Arn
           Id: "TargetFunctionV1"
   PermissionForEventsToInvokeLambda: 
     Type: AWS::Lambda::Permission
@@ -167,7 +201,4 @@ Resources:
         Ref: "InvokeSecondsPerMin"
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
-      SourceArn: 
-        Fn::GetAtt: 
-          - "ScheduledRule"
-          - "Arn"
+      SourceArn: !GetAtt ScheduleRule.Arn
