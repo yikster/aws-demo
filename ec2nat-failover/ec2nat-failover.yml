@@ -1,0 +1,173 @@
+Parameters:
+  PCheckInterval: 
+    Description: Nat EC2 HealthCheck interval seconds
+    MinValue: 5
+    MaxValue: 120
+    Type: Number
+  PAZ1NatInstanceId:
+    Description: Available Zone1 NAT Instance Id
+    Type: String
+  PAZ2NatInstanceId:
+    Description: Available Zone2 NAT Instance Id
+    Type: String
+  PAZ1RouteTableId:
+    Description: Available Zone1 Private RouteTable Id
+    Type: String
+  PAZ2RouteTableId:
+    Description: Available Zone2 Private RouteTable Id
+    Type: String
+Resources:
+  HealthCheckAndUpdateRoute: 
+    Type: "AWS::Lambda::Function"
+    Properties: 
+      Runtime: "python3.7"
+      Timeout: 90
+      TracingConfig:
+        Mode: "Active"
+      Handler: "index.handler"
+      Role: "arn:aws:iam::125492839279:role/CodeStar-natinstanceheal-Execution"
+      Environment:
+        Variables:
+          CHECK_INTERVAL: !Ref PCheckInterval
+          AZ1_NAT_EC2: !Ref PAZ1NatInstanceId
+          AZ2_NAT_EC2: !Ref PAZ2NatInstanceId
+          AZ1_RT: !Ref PAZ1RouteTableId
+          AZ2_RT: !Ref PAZ2RouteTableId
+      Code: 
+        ZipFile: |
+          import json
+          import datetime
+          import time
+          import boto3
+          import json
+          import logging
+          import os
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          AZ1_NAT_EC2 = os.environ['AZ1_NAT_EC2']
+          AZ2_NAT_EC2 = os.environ['AZ2_NAT_EC2']
+
+          AZ1_RT = os.environ['AZ1_RT']
+          AZ2_RT = os.environ['AZ2_RT']
+
+          client = boto3.client('ec2')
+          snsClient = boto3.client('sns')
+
+          def set_route_nat(route_id, nat_ec2_id):
+              response = client.replace_route(RouteTableId=route_id, DestinationCidrBlock="0.0.0.0/0", InstanceId=nat_ec2_id)
+              logger.info("ROUTE TABLE CHANGED")
+              logger.info(response)
+              
+
+          def handler(event, context):
+              data = {
+                  'output': 'HealthCheck called',
+                  'timestamp': datetime.datetime.utcnow().isoformat()
+              }
+              
+              response = client.describe_instance_status(InstanceIds=[AZ1_NAT_EC2, AZ2_NAT_EC2])
+              az1_status_ok = False
+              az2_status_ok = False
+              
+              logger.info("ec2status:", response)
+              for item in response["InstanceStatuses"]:
+                  if item["InstanceState"]["Name"] == "running" and item["InstanceStatus"]["Status"] == "ok" and item["SystemStatus"]["Status"] == "ok":
+                      if AZ1_NAT_EC2 == item["InstanceId"]:
+                          az1_status_ok = True
+                          set_route_nat(AZ1_RT, AZ1_NAT_EC2)
+                      if AZ2_NAT_EC2 == item["InstanceId"]:
+                          az2_status_ok = True
+                          set_route_nat(AZ2_RT, AZ2_NAT_EC2)
+                              
+              if az1_status_ok == False:
+                  set_route_nat(AZ1_RT, AZ2_NAT_EC2)
+              
+              if az2_status_ok == False:
+                  set_route_nat(AZ2_RT, AZ1_NAT_EC2)
+              
+              if False == (az1_status_ok and az2_status_ok):
+                  logger.info("Failovered, route changed: AZ1_NAT_EC2:%s, AZ2_NAT_EC2:%s" % (az1_status_ok, az2_status_ok))
+              else:
+                  logger.info("All NAT EC2s are running and stauscheck is OK")
+
+              return {'statusCode': 200,
+                      'body': json.dumps(data),
+                      'headers': {'Content-Type': 'application/json'}}
+
+
+
+
+
+
+
+
+  InvokeSecondsPerMin: 
+    Type: "AWS::Lambda::Function"
+    Properties: 
+      Runtime: "python3.7"
+      Timeout: 90
+      TracingConfig:
+        Mode: "Active"
+      Handler: "index.handler"
+      Role: "arn:aws:iam::125492839279:role/CodeStar-natinstanceheal-Execution"
+      Environment:
+        Variables:
+          FunctionName: !GetAtt ["HealthCheckAndUpdateRoute", "Arn"] 
+          CheckInterval: !Ref PCheckInterval
+      Code:
+        ZipFile: |
+          import json
+          import datetime
+          import time
+          import boto3
+          import json
+          import logging
+          import os
+
+          FUNCTION_NAME = os.environ['FunctionName']
+          CHECK_INTERVAL = int(os.environ['CheckInterval'])
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          client = boto3.client('ec2')
+          lambda_client = boto3.client('lambda')
+
+          def handler(event, context):
+              logger.info(event)
+              start = datetime.datetime.now()
+              for i in range(int(60/CHECK_INTERVAL)):
+                  logger.info("call lambda function health check" +str(i))
+                  response = lambda_client.invoke(FunctionName=FUNCTION_NAME, InvocationType='RequestResponse')
+                  logger.info(response)
+                  time.sleep(CHECK_INTERVAL)
+              end = datetime.datetime.now()
+              elapsed = end - start
+              
+              return {'statusCode': 200,
+                      'body': "Elapsed" + str(elapsed.total_seconds()),
+                      'headers': {'Content-Type': 'application/json'}}
+  ScheduledRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "ScheduledRule"
+      ScheduleExpression: "rate(1 minute)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "InvokeSecondsPerMin"
+              - "Arn"
+          Id: "TargetFunctionV1"
+  PermissionForEventsToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: 
+        Ref: "InvokeSecondsPerMin"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "ScheduledRule"
+          - "Arn"
