@@ -146,10 +146,10 @@ Resources:
       TracingConfig:
         Mode: "Active"
       Handler: "index.handler"
-      Role: "arn:aws:iam::125492839279:role/CodeStar-natinstanceheal-Execution"
+      Role: !GetAtt NatHealthCheckRole.Arn
       Environment:
         Variables:
-          FunctionName: !GetAtt ["HealthCheckAndUpdateRoute", "Arn"] 
+          FunctionName: !GetAtt HealthCheckAndUpdateRoute.Arn
           CheckInterval: !Ref PCheckInterval
       Code:
         ZipFile: |
