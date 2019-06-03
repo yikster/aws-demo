@@ -7,4 +7,5 @@ sudo yum install -y python3-devel.x86_64
 sudo yum install -y gcc
 sudo pip3 install bzt
 export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
 bzt quick_test.yml
