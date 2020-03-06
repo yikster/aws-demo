@@ -1,0 +1,19 @@
+execution:
+- concurrency: 10
+  ramp-up: 1m
+  hold-for: 5m
+  throughput: 5
+  scenario: quick-test-tps
+
+scenarios:
+  quick-test-tps:
+    requests:
+    - url: https://d352ebbz2q1dse.cloudfront.net/uf.jpg?u=${user_id}&i=${item_id}&action=click
+      random-source-ip: true
+    data-sources:
+    - path: users-items.csv  # this is full form; required option
+      delimiter: ','  # CSV delimiter, auto-detected by default
+      quoted: false  # allow quoted data; ignored when random-order is true
+      loop: true  # loop over in case of end-of-file reached if true, stop executing if false
+      variable-names: user_id,item_id  # delimiter-separated list of variable names
+      random-order: true # enables randomizing plugin; false by default
